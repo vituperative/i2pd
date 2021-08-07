@@ -30,6 +30,8 @@ namespace proxy
 	static const size_t SOCKS_FORWARDER_BUFFER_SIZE = 8192;
 
 	static const size_t SOCKS_UPSTREAM_SOCKS4A_REPLY_SIZE = 8;
+	static const size_t SOCKS_UPSTREAM_SOCKS5_INIT_REPLY_SIZE = 2;
+	static const size_t SOCKS_UPSTREAM_SOCKS5_CONNECT_REPLY_MIN_SIZE = 10;
 
 	struct SOCKSDnsAddress
 	{
@@ -73,43 +75,43 @@ namespace proxy
 			};
 			enum authMethods
 			{
-				AUTH_NONE = 0, //No authentication, skip to next step
-				AUTH_GSSAPI = 1, //GSSAPI authentication
-				AUTH_USERPASSWD = 2, //Username and password
-				AUTH_UNACCEPTABLE = 0xff //No acceptable method found
+				AUTH_NONE = 0,              // No authentication, skip to next step
+				AUTH_GSSAPI = 1,            // GSSAPI authentication
+				AUTH_USERPASSWD = 2,        // Username and password
+				AUTH_UNACCEPTABLE = 0xff    // No acceptable method found
 			};
 			enum addrTypes
 			{
-				ADDR_IPV4 = 1, //IPv4 address (4 octets)
-				ADDR_DNS = 3, // DNS name (up to 255 octets)
-				ADDR_IPV6 = 4 //IPV6 address (16 octets)
+				ADDR_IPV4 = 1,              // IPv4 address (4 octets)
+				ADDR_DNS = 3,               // DNS name (up to 255 octets)
+				ADDR_IPV6 = 4               // IPV6 address (16 octets)
 			};
 			enum errTypes
 			{
-				SOCKS5_OK = 0, // No error for SOCKS5
-				SOCKS5_GEN_FAIL = 1, // General server failure
-				SOCKS5_RULE_DENIED = 2, // Connection disallowed by ruleset
-				SOCKS5_NET_UNREACH = 3, // Network unreachable
-				SOCKS5_HOST_UNREACH = 4, // Host unreachable
-				SOCKS5_CONN_REFUSED = 5, // Connection refused by the peer
-				SOCKS5_TTL_EXPIRED = 6, // TTL Expired
-				SOCKS5_CMD_UNSUP = 7, // Command unsupported
-				SOCKS5_ADDR_UNSUP = 8, // Address type unsupported
-				SOCKS4_OK = 90, // No error for SOCKS4
-				SOCKS4_FAIL = 91, // Failed establishing connecting or not allowed
+				SOCKS5_OK = 0,              // No error for SOCKS5
+				SOCKS5_GEN_FAIL = 1,        // General server failure
+				SOCKS5_RULE_DENIED = 2,     // Connection disallowed by ruleset
+				SOCKS5_NET_UNREACH = 3,     // Network unreachable
+				SOCKS5_HOST_UNREACH = 4,    // Host unreachable
+				SOCKS5_CONN_REFUSED = 5,    // Connection refused by the peer
+				SOCKS5_TTL_EXPIRED = 6,     // TTL Expired
+				SOCKS5_CMD_UNSUP = 7,       // Command unsupported
+				SOCKS5_ADDR_UNSUP = 8,      // Address type unsupported
+				SOCKS4_OK = 90,             // No error for SOCKS4
+				SOCKS4_FAIL = 91,           // Failed establishing connecting or not allowed
 				SOCKS4_IDENTD_MISSING = 92, // Couldn't connect to the identd server
-				SOCKS4_IDENTD_DIFFER = 93 // The ID reported by the application and by identd differ
+				SOCKS4_IDENTD_DIFFER = 93   // The ID reported by the application and by identd differ
 			};
 			enum cmdTypes
 			{
-				CMD_CONNECT = 1, // TCP Connect
-				CMD_BIND = 2, // TCP Bind
-				CMD_UDP = 3 // UDP associate
+				CMD_CONNECT = 1,            // TCP Connect
+				CMD_BIND = 2,               // TCP Bind
+				CMD_UDP = 3                 // UDP associate
 			};
 			enum socksVersions
 			{
-				SOCKS4 = 4, // SOCKS4
-				SOCKS5 = 5 // SOCKS5
+				SOCKS4 = 4,                 // SOCKS4
+				SOCKS5 = 5                  // SOCKS5
 			};
 			union address
 			{
@@ -127,7 +129,7 @@ namespace proxy
 			boost::asio::const_buffers_1 GenerateSOCKS5SelectAuth(authMethods method);
 			boost::asio::const_buffers_1 GenerateSOCKS4Response(errTypes error, uint32_t ip, uint16_t port);
 			boost::asio::const_buffers_1 GenerateSOCKS5Response(errTypes error, addrTypes type, const address &addr, uint16_t port);
-			boost::asio::const_buffers_1 GenerateUpstreamRequest();
+			boost::asio::const_buffers_1 GenerateUpstreamRequest(int version, bool initial);
 			bool Socks5ChooseAuth();
 			void SocksRequestFailed(errTypes error);
 			void SocksRequestSuccess();
@@ -139,7 +141,7 @@ namespace proxy
 
 			void SocksUpstreamSuccess();
 			void AsyncUpstreamSockRead();
-			void SendUpstreamRequest();
+			void SendUpstreamRequest(int version, bool initial);
 			void HandleUpstreamData(uint8_t * buff, std::size_t len);
 			void HandleUpstreamSockSend(const boost::system::error_code & ecode, std::size_t bytes_transfered);
 			void HandleUpstreamSockRecv(const boost::system::error_code & ecode, std::size_t bytes_transfered);
@@ -154,9 +156,9 @@ namespace proxy
 			std::shared_ptr<i2p::stream::Stream> m_stream;
 			uint8_t *m_remaining_data; //Data left to be sent
 			uint8_t *m_remaining_upstream_data; //upstream data left to be forwarded
-			uint8_t m_response[7+max_socks_hostname_size];
+			uint8_t m_response[7 + max_socks_hostname_size];
 			uint8_t m_upstream_response[SOCKS_UPSTREAM_SOCKS4A_REPLY_SIZE];
-			uint8_t m_upstream_request[14+max_socks_hostname_size];
+			uint8_t m_upstream_request[14 + max_socks_hostname_size];
 			std::size_t m_upstream_response_len;
 			address m_address; //Address
 			std::size_t m_remaining_data_len; //Size of the data left to be sent
@@ -274,33 +276,49 @@ namespace proxy
 		return boost::asio::const_buffers_1(m_response, size);
 	}
 
-	boost::asio::const_buffers_1 SOCKSHandler::GenerateUpstreamRequest()
+	boost::asio::const_buffers_1 SOCKSHandler::GenerateUpstreamRequest(int version, bool initial)
 	{
 		size_t upstreamRequestSize = 0;
 		// TODO: negotiate with upstream
-		// SOCKS 4a
-		m_upstream_request[0] = '\x04'; //version
-		m_upstream_request[1] = m_cmd;
-		htobe16buf(m_upstream_request + 2, m_port);
-		m_upstream_request[4] = 0;
-		m_upstream_request[5] = 0;
-		m_upstream_request[6] = 0;
-		m_upstream_request[7] = 1;
-		// user id
-		m_upstream_request[8] = 'i';
-		m_upstream_request[9] = '2';
-		m_upstream_request[10] = 'p';
-		m_upstream_request[11] = 'd';
-		m_upstream_request[12] = 0;
-		upstreamRequestSize += 13;
-		if (m_address.dns.size <= max_socks_hostname_size - ( upstreamRequestSize + 1) ) {
-			// bounds check okay
-			memcpy(m_upstream_request + upstreamRequestSize, m_address.dns.value, m_address.dns.size);
-			upstreamRequestSize += m_address.dns.size;
-			// null terminate
-			m_upstream_request[++upstreamRequestSize] = 0;
-		} else {
-			LogPrint(eLogError, "SOCKS: BUG!!! m_addr.dns.sizs > max_socks_hostname - ( upstreamRequestSize + 1 ) )");
+		if (version == 5) // SOCKS5
+		{
+			if (initial)
+			{
+				m_upstream_request[0] = '\x05'; // VER
+				m_upstream_request[1] = 1;      // NAUTH
+				m_upstream_request[2] = 0;      // AUTH
+				upstreamRequestSize += 3;
+			}
+			else
+			{
+				return GenerateSOCKS5Response(SOCKS5_GEN_FAIL, m_addrtype, m_address, m_port); // dirty hack, SOCKS5_GEN_FAIL == 1, that's a "establish a TCP/IP stream connection" command
+			}
+		}
+		else if (version == 4) // SOCKS4a
+		{
+			m_upstream_request[0] = '\x04'; // VER
+			m_upstream_request[1] = m_cmd;
+			htobe16buf(m_upstream_request + 2, m_port);
+			m_upstream_request[4] = 0;
+			m_upstream_request[5] = 0;
+			m_upstream_request[6] = 0;
+			m_upstream_request[7] = 1;
+			// user id
+			m_upstream_request[8] = 'i';
+			m_upstream_request[9] = '2';
+			m_upstream_request[10] = 'p';
+			m_upstream_request[11] = 'd';
+			m_upstream_request[12] = 0;
+			upstreamRequestSize += 13;
+			if (m_address.dns.size <= max_socks_hostname_size - ( upstreamRequestSize + 1) ) {
+				// bounds check okay
+				memcpy(m_upstream_request + upstreamRequestSize, m_address.dns.value, m_address.dns.size);
+				upstreamRequestSize += m_address.dns.size;
+				// null terminate
+				m_upstream_request[++upstreamRequestSize] = 0;
+			} else {
+				LogPrint(eLogError, "SOCKS: BUG!!! m_addr.dns.size > max_socks_hostname - ( upstreamRequestSize + 1 ) )");
+			}
 		}
 		return boost::asio::const_buffers_1(m_upstream_request, upstreamRequestSize);
 	}
@@ -417,6 +435,7 @@ namespace proxy
 			{
 				case GET_SOCKSV:
 					m_socksv = (SOCKSHandler::socksVersions) *sock_buff;
+					LogPrint(eLogInfo, "SOCKS: received version: ", ((int)*sock_buff));
 					switch (*sock_buff)
 					{
 						case SOCKS4:
@@ -704,7 +723,7 @@ namespace proxy
 			break;
 			case SOCKS5:
 				LogPrint(eLogInfo, "SOCKS: v5 connection success");
-				//HACK only 16 bits passed in port as SOCKS5 doesn't allow for more
+				// HACK only 16 bits passed in port as SOCKS5 doesn't allow for more
 				response = GenerateSOCKS5Response(SOCKS5_OK, ADDR_DNS, m_address, m_port);
 			break;
 		}
@@ -715,7 +734,6 @@ namespace proxy
 		GetOwner()->AddHandler(forwarder);
 		forwarder->Start();
 		Terminate();
-
 	}
 
 	void SOCKSHandler::HandleUpstreamData(uint8_t * dataptr, std::size_t len)
@@ -723,14 +741,33 @@ namespace proxy
 		if (m_state == UPSTREAM_HANDSHAKE) {
 			m_upstream_response_len += len;
 			// handle handshake data
-			if (m_upstream_response_len < SOCKS_UPSTREAM_SOCKS4A_REPLY_SIZE) {
+			if (m_upstream_response_len == SOCKS_UPSTREAM_SOCKS5_INIT_REPLY_SIZE) {
+				if (m_upstream_response[0] == '\x05' && m_upstream_response[1] != AUTH_UNACCEPTABLE) {
+					LogPrint(eLogInfo, "SOCKS: upstream proxy: success greeting");
+					SendUpstreamRequest(m_socksv, false);
+				} else {
+					LogPrint(eLogError, "SOCKS: upstream proxy failure: no acceptable methods were offered");
+					SocksRequestFailed(SOCKS5_GEN_FAIL);
+				}
+			}
+			else if (m_upstream_response[0] == '\x05' && m_upstream_response_len >= SOCKS_UPSTREAM_SOCKS5_CONNECT_REPLY_MIN_SIZE)
+			{
+				uint8_t resp = m_upstream_response[1];
+				if (resp == SOCKS5_OK) {
+					SocksUpstreamSuccess();
+				} else {
+					LogPrint(eLogError, "SOCKS: upstream proxy failure: ", (int) resp);
+					SocksRequestFailed(SOCKS5_GEN_FAIL);
+				}
+			}
+			else if (m_upstream_response_len < SOCKS_UPSTREAM_SOCKS4A_REPLY_SIZE) {
 				// too small, continue reading
 				AsyncUpstreamSockRead();
 			} else if (len == SOCKS_UPSTREAM_SOCKS4A_REPLY_SIZE) {
 				// just right
 				uint8_t resp = m_upstream_response[1];
 				if (resp == SOCKS4_OK) {
-					// we have connected !
+					// we have connected!
 					SocksUpstreamSuccess();
 				} else {
 					// upstream failure
@@ -748,12 +785,12 @@ namespace proxy
 		}
 	}
 
-	void SOCKSHandler::SendUpstreamRequest()
+	void SOCKSHandler::SendUpstreamRequest(int version, bool initial)
 	{
 		LogPrint(eLogInfo, "SOCKS: negotiating with upstream proxy");
 		EnterState(UPSTREAM_HANDSHAKE);
 		if (m_upstreamSock) {
-			boost::asio::write(*m_upstreamSock, GenerateUpstreamRequest());
+			boost::asio::write(*m_upstreamSock, GenerateUpstreamRequest(version, initial));
 			AsyncUpstreamSockRead();
 		} else {
 			LogPrint(eLogError, "SOCKS: no upstream socket to send handshake to");
@@ -768,7 +805,7 @@ namespace proxy
 			return;
 		}
 		LogPrint(eLogInfo, "SOCKS: connected to upstream proxy");
-		SendUpstreamRequest();
+		SendUpstreamRequest(m_socksv, true); // try SOCKS5 first
 	}
 
 	void SOCKSHandler::HandleUpstreamResolved(const boost::system::error_code & ecode, boost::asio::ip::tcp::resolver::iterator itr)
