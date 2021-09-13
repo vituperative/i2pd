@@ -305,10 +305,7 @@ namespace http {
 	void ShowStatus (std::stringstream& s, bool includeHiddenContent, i2p::http::OutputFormatEnum outputFormat)
 	{
 		s << "<tr><td>" << tr("Network Status") << "</td><td id=\"netstatus\">";
-		if (i2p::context.SupportsV4 ()) {
-			s << "<span class=\"badge\">" << tr("IPv4") << "</span> ";
-			ShowNetworkStatus (s, i2p::context.GetStatus ());
-		}
+		ShowNetworkStatus (s, i2p::context.GetStatus ());
 		if (i2p::context.SupportsV6 ()) {
 			s << "<span class=\"badge\">" << tr("IPv6") << "</span> ";
 			ShowNetworkStatus (s, i2p::context.GetStatusV6 ());
