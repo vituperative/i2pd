@@ -231,7 +231,7 @@ namespace transport
 				uint32_t tsA = bufbe32toh (options + 8);
 				if (tsA < ts - NTCP2_CLOCK_SKEW || tsA > ts + NTCP2_CLOCK_SKEW)
 				{
-					LogPrint (eLogWarning, "NTCP2: SessionRequest time difference ", (int)(ts - tsA), " exceeds clock skew");
+					LogPrint (eLogWarning, "NTCP2: SessionRequest time difference ", (int)(ts - tsA), " exceeds maximum tolerated clock skew");
 					return false;
 				}
 			}
@@ -272,7 +272,7 @@ namespace transport
 			uint32_t tsB = bufbe32toh (payload + 8);
 			if (tsB < ts - NTCP2_CLOCK_SKEW || tsB > ts + NTCP2_CLOCK_SKEW)
 			{
-				LogPrint (eLogWarning, "NTCP2: SessionCreated time difference ", (int)(ts - tsB), " exceeds clock skew");
+				LogPrint (eLogWarning, "NTCP2: SessionCreated time difference ", (int)(ts - tsB), " maximum tolerated exceeds clock skew");
 				return false;
 			}
 		}
@@ -328,7 +328,7 @@ namespace transport
 		m_SendMDCtx(nullptr), m_ReceiveMDCtx (nullptr),
 #endif
 		m_NextReceivedLen (0), m_NextReceivedBuffer (nullptr), m_NextSendBuffer (nullptr),
-		m_NextReceivedBufferSize (0), m_ReceiveSequenceNumber (0), m_SendSequenceNumber (0), 
+		m_NextReceivedBufferSize (0), m_ReceiveSequenceNumber (0), m_SendSequenceNumber (0),
 		m_IsSending (false), m_IsReceiving (false), m_NextPaddingSize (16)
 	{
 		if (in_RemoteRouter) // Alice
@@ -402,7 +402,7 @@ namespace transport
 	}
 
 	void NTCP2Session::CreateNextReceivedBuffer (size_t size)
-	{		
+	{
 		if (m_NextReceivedBuffer)
 		{
 			if (size <= m_NextReceivedBufferSize)
@@ -412,19 +412,19 @@ namespace transport
 		}
 		m_NextReceivedBuffer = new uint8_t[size];
 		m_NextReceivedBufferSize = size;
-	}	
+	}
 
 	void NTCP2Session::DeleteNextReceiveBuffer (uint64_t ts)
 	{
-		if (m_NextReceivedBuffer && !m_IsReceiving && 
+		if (m_NextReceivedBuffer && !m_IsReceiving &&
 		    ts > m_LastActivityTimestamp + NTCP2_RECEIVE_BUFFER_DELETION_TIMEOUT)
 		{
 			delete[] m_NextReceivedBuffer;
 			m_NextReceivedBuffer = nullptr;
 			m_NextReceivedBufferSize = 0;
-		}	
-	}	
-		
+		}
+	}
+
 	void NTCP2Session::KeyDerivationFunctionDataPhase ()
 	{
 		uint8_t k[64];

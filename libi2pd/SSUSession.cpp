@@ -280,7 +280,7 @@ namespace transport
 			uint32_t signedOnTime = bufbe32toh(payload);
 			if (signedOnTime < ts - SSU_CLOCK_SKEW || signedOnTime > ts + SSU_CLOCK_SKEW)
 			{
-				LogPrint (eLogError, "SSU: Clock skew detected ", (int)ts - signedOnTime, ". Check your clock!");
+				LogPrint (eLogError, "SSU: Excessive clock skew detected ", (int)ts - signedOnTime, ". Check your clock!");
 				i2p::context.SetError (eRouterErrorClockSkew);
 			}
 		}
@@ -342,7 +342,7 @@ namespace transport
 		uint32_t signedOnTime = bufbe32toh(payload);
 		if (signedOnTime < ts - SSU_CLOCK_SKEW || signedOnTime > ts + SSU_CLOCK_SKEW)
 		{
-			LogPrint (eLogError, "SSU: 'Confirmed' time difference ", (int)ts - signedOnTime, " exceeds clock skew");
+			LogPrint (eLogError, "SSU: 'Confirmed' time difference ", (int)ts - signedOnTime, " exceeds maximum tolerated clock skew");
 			Failed ();
 			return;
 		}
@@ -1015,7 +1015,7 @@ namespace transport
 			else
 				++it;
 		}
-	}	
+	}
 
 	void SSUSession::ProcessPeerTest (const uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint)
 	{
