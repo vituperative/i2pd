@@ -244,13 +244,12 @@ namespace tunnel
 		}
 	}
 
-	void InboundTunnel::HandleTunnelDataMsg (std::shared_ptr<const I2NPMessage> msg)
+	void InboundTunnel::HandleTunnelDataMsg (std::shared_ptr<I2NPMessage>&& msg)
 	{
 		if (IsFailed ()) SetState (eTunnelStateEstablished); // incoming messages means a tunnel is alive
-		auto newMsg = CreateEmptyTunnelDataMsg (true);
-		EncryptTunnelMsg (msg, newMsg);
-		newMsg->from = shared_from_this ();
-		m_Endpoint.HandleDecryptedTunnelDataMsg (newMsg);
+		EncryptTunnelMsg (msg, msg);
+		msg->from = shared_from_this ();
+		m_Endpoint.HandleDecryptedTunnelDataMsg (msg);
 	}
 
 	void InboundTunnel::Print (std::stringstream& s) const
@@ -316,7 +315,7 @@ namespace tunnel
 		m_Gateway.SendBuffer ();
 	}
 
-	void OutboundTunnel::HandleTunnelDataMsg (std::shared_ptr<const i2p::I2NPMessage> tunnelMsg)
+	void OutboundTunnel::HandleTunnelDataMsg (std::shared_ptr<i2p::I2NPMessage>&& tunnelMsg)
 	{
 		LogPrint (eLogError, "Tunnel: Incoming message for outbound tunnel ", GetTunnelID ());
 	}
@@ -532,7 +531,7 @@ namespace tunnel
 								if (tunnel)
 								{
 									if (typeID == eI2NPTunnelData)
-										tunnel->HandleTunnelDataMsg (msg);
+										tunnel->HandleTunnelDataMsg (std::move (msg));
 									else // tunnel gateway assumed
 										HandleTunnelGatewayMsg (tunnel, msg);
 								}
