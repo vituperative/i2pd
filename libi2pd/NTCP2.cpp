@@ -875,12 +875,16 @@ namespace transport
 						LogPrint (eLogError, "NTCP2: I2NP block is too long ", size);
 						break;
 					}
-					auto nextMsg = NewI2NPMessage (size);
-					nextMsg->Align (12); // for possible tunnel msg
+					auto nextMsg = (frame[offset] == eI2NPTunnelData) ? NewI2NPTunnelMessage (true) : NewI2NPMessage (size);
 					nextMsg->len = nextMsg->offset + size + 7; // 7 more bytes for full I2NP header
-					memcpy (nextMsg->GetNTCP2Header (), frame + offset, size);
-					nextMsg->FromNTCP2 ();
-					m_Handler.PutNextMessage (nextMsg);
+					if (nextMsg->len <= nextMsg->maxLen)
+					{	
+						memcpy (nextMsg->GetNTCP2Header (), frame + offset, size);
+						nextMsg->FromNTCP2 ();
+						m_Handler.PutNextMessage (std::move (nextMsg));
+					}	
+					else
+						LogPrint (eLogError, "NTCP2: I2NP block is too long for I2NP message");
 					break;
 				}
 				case eNTCP2BlkTermination:
