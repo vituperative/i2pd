@@ -176,7 +176,8 @@ namespace transport
 			if (it == m_IncompleteMessages.end ())
 			{
 				// create new message
-				auto msg = NewI2NPShortMessage ();
+				auto msg = (!fragmentNum && fragmentSize > 0 && buf[I2NP_SHORT_HEADER_TYPEID_OFFSET] == eI2NPTunnelData) ?
+					NewI2NPTunnelMessage (true) : NewI2NPShortMessage ();
 				msg->len -= I2NP_SHORT_HEADER_SIZE;
 				it = m_IncompleteMessages.insert (std::make_pair (msgID,
 					m_Session.GetServer ().GetIncompleteMessagesPool ().AcquireShared (msg))).first;
@@ -184,7 +185,7 @@ namespace transport
 			auto& incompleteMessage = it->second;
 			// mark fragment as received
 			if (fragmentNum < 64)
-				incompleteMessage->receivedFragmentsBits |= (0x01 << fragmentNum);
+				incompleteMessage->receivedFragmentsBits |= (uint64_t(0x01) << fragmentNum);
 			else
 				LogPrint (eLogWarning, "SSU: Fragment number ", fragmentNum, " exceeds 64");
 			
