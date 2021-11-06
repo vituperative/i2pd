@@ -190,20 +190,23 @@ namespace tunnel
 		return v;
 	}
 
-	std::shared_ptr<OutboundTunnel> TunnelPool::GetNextOutboundTunnel (std::shared_ptr<OutboundTunnel> excluded) const
+	std::shared_ptr<OutboundTunnel> TunnelPool::GetNextOutboundTunnel (std::shared_ptr<OutboundTunnel> excluded,
+		i2p::data::RouterInfo::CompatibleTransports compatible) const
 	{
 		std::unique_lock<std::mutex> l(m_OutboundTunnelsMutex);
-		return GetNextTunnel (m_OutboundTunnels, excluded);
+		return GetNextTunnel (m_OutboundTunnels, excluded, compatible);
 	}
 
-	std::shared_ptr<InboundTunnel> TunnelPool::GetNextInboundTunnel (std::shared_ptr<InboundTunnel> excluded) const
+	std::shared_ptr<InboundTunnel> TunnelPool::GetNextInboundTunnel (std::shared_ptr<InboundTunnel> excluded,
+		i2p::data::RouterInfo::CompatibleTransports compatible) const
 	{
 		std::unique_lock<std::mutex> l(m_InboundTunnelsMutex);
-		return GetNextTunnel (m_InboundTunnels, excluded);
+		return GetNextTunnel (m_InboundTunnels, excluded, compatible);
 	}
 
 	template<class TTunnels>
-	typename TTunnels::value_type TunnelPool::GetNextTunnel (TTunnels& tunnels, typename TTunnels::value_type excluded) const
+	typename TTunnels::value_type TunnelPool::GetNextTunnel (TTunnels& tunnels, 
+		typename TTunnels::value_type excluded, i2p::data::RouterInfo::CompatibleTransports compatible) const
 	{
 		if (tunnels.empty ()) return nullptr;
 		uint32_t ind = rand () % (tunnels.size ()/2 + 1), i = 0;
@@ -211,7 +214,7 @@ namespace tunnel
 		typename TTunnels::value_type tunnel = nullptr;
 		for (const auto& it: tunnels)
 		{
-			if (it->IsEstablished () && it != excluded)
+			if (it->IsEstablished () && it != excluded && (compatible & it->GetFarEndTransports ()))
 			{
 				if (it->IsSlow () || (HasLatencyRequirement() && it->LatencyIsKnown() &&
 				    !it->LatencyFitsRange(m_MinLatency, m_MaxLatency)))
@@ -495,9 +498,8 @@ namespace tunnel
 			}
 			prevHop = hop;
 			path.Add (hop);
-			if (i == numHops - 1)
-				path.farEndTransports = hop->GetCompatibleTransports (inbound);
 		}
+		path.farEndTransports = prevHop->GetCompatibleTransports (inbound); // last hop
 		return true;
 	}
 
@@ -552,13 +554,13 @@ namespace tunnel
 
 	void TunnelPool::CreateInboundTunnel ()
 	{
-		auto outboundTunnel = GetNextOutboundTunnel ();
-		if (!outboundTunnel)
-			outboundTunnel = tunnels.GetNextOutboundTunnel ();
 		LogPrint (eLogDebug, "Tunnels: Creating destination inbound tunnel...");
 		Path path;
 		if (SelectPeers (path, true))
 		{
+			auto outboundTunnel = GetNextOutboundTunnel (nullptr, path.farEndTransports);
+			if (!outboundTunnel)
+				outboundTunnel = tunnels.GetNextOutboundTunnel ();
 			std::shared_ptr<TunnelConfig> config;
 			if (m_NumInboundHops > 0)
 			{
@@ -580,15 +582,13 @@ namespace tunnel
 			CreateInboundTunnel ();
 			return;
 		}
-		auto outboundTunnel = GetNextOutboundTunnel ();
+		auto outboundTunnel = GetNextOutboundTunnel (nullptr, tunnel->GetFarEndTransports ());
 		if (!outboundTunnel)
 			outboundTunnel = tunnels.GetNextOutboundTunnel ();
 		LogPrint (eLogDebug, "Tunnels: Re-creating destination inbound tunnel...");
 		std::shared_ptr<TunnelConfig> config;
 		if (m_NumInboundHops > 0 && tunnel->GetPeers().size())
-		{
-			config = std::make_shared<TunnelConfig>(tunnel->GetPeers (), tunnel->IsShortBuildMessage ());
-		}
+			config = std::make_shared<TunnelConfig>(tunnel->GetPeers (), tunnel->IsShortBuildMessage (), tunnel->GetFarEndTransports ());
 		if (!m_NumInboundHops || config)
 		{
 			auto newTunnel = tunnels.CreateInboundTunnel (config, shared_from_this(), outboundTunnel);
@@ -600,16 +600,20 @@ namespace tunnel
 	}
 
 	void TunnelPool::CreateOutboundTunnel ()
-	{
-		auto inboundTunnel = GetNextInboundTunnel ();
-		if (!inboundTunnel)
-			inboundTunnel = tunnels.GetNextInboundTunnel ();
-		if (inboundTunnel)
 		{
 			LogPrint (eLogDebug, "Tunnels: Creating destination outbound tunnel...");
 			Path path;
 			if (SelectPeers (path, false))
 			{
+			auto inboundTunnel = GetNextInboundTunnel (nullptr, path.farEndTransports);
+			if (!inboundTunnel)
+				inboundTunnel = tunnels.GetNextInboundTunnel ();
+			if (!inboundTunnel)
+			{
+				LogPrint (eLogError, "Tunnels: Can't create outbound tunnel, no inbound tunnels found");
+				return;
+			}	
+			
 				if (m_LocalDestination && !m_LocalDestination->SupportsEncryptionType (i2p::data::CRYPTO_KEY_TYPE_ECIES_X25519_AEAD))
 					path.isShort = false; // because can't handle ECIES encrypted reply
 				
@@ -618,23 +622,20 @@ namespace tunnel
 					config = std::make_shared<TunnelConfig>(path.peers, inboundTunnel->GetNextTunnelID (), 
 						inboundTunnel->GetNextIdentHash (), path.isShort, path.farEndTransports);
 
-				std::shared_ptr<OutboundTunnel> tunnel;
-				if (path.isShort)
-				{
-					// TODO: implement it better
-					tunnel = tunnels.CreateOutboundTunnel (config, inboundTunnel->GetTunnelPool ());
-					tunnel->SetTunnelPool (shared_from_this ());
-				}
-				else
-					tunnel = tunnels.CreateOutboundTunnel (config, shared_from_this ());
-				if (tunnel && tunnel->IsEstablished ()) // zero hops
-					TunnelCreated (tunnel);
-			}
-			else
-				LogPrint (eLogError, "Tunnels: Can't create outbound tunnel, no peers available");
+			std::shared_ptr<OutboundTunnel> tunnel;
+			if (path.isShort)
+			{
+				// TODO: implement it better
+				tunnel = tunnels.CreateOutboundTunnel (config, inboundTunnel->GetTunnelPool ());
+				tunnel->SetTunnelPool (shared_from_this ());
+			}	
+			else	
+				tunnel = tunnels.CreateOutboundTunnel (config, shared_from_this ());
+			if (tunnel && tunnel->IsEstablished ()) // zero hops
+				TunnelCreated (tunnel);
 		}
 		else
-			LogPrint (eLogError, "Tunnels: Can't create outbound tunnel, no inbound tunnels found");
+			LogPrint (eLogError, "Tunnels: Can't create outbound tunnel, no peers available");
 	}
 
 	void TunnelPool::RecreateOutboundTunnel (std::shared_ptr<OutboundTunnel> tunnel)
@@ -644,7 +645,7 @@ namespace tunnel
 			CreateOutboundTunnel ();
 			return;
 		}
-		auto inboundTunnel = GetNextInboundTunnel ();
+		auto inboundTunnel = GetNextInboundTunnel (nullptr, tunnel->GetFarEndTransports ());
 		if (!inboundTunnel)
 			inboundTunnel = tunnels.GetNextInboundTunnel ();
 		if (inboundTunnel)
@@ -654,7 +655,7 @@ namespace tunnel
 			if (m_NumOutboundHops > 0 && tunnel->GetPeers().size())
 			{
 				config = std::make_shared<TunnelConfig>(tunnel->GetPeers (), inboundTunnel->GetNextTunnelID (), 
-					inboundTunnel->GetNextIdentHash (), inboundTunnel->IsShortBuildMessage ());
+					inboundTunnel->GetNextIdentHash (), inboundTunnel->IsShortBuildMessage (), tunnel->GetFarEndTransports ());
 			}
 			if (!m_NumOutboundHops || config)
 			{
