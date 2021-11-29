@@ -115,7 +115,7 @@ namespace data
 				}
 				catch (boost::property_tree::ptree_bad_path& ex)
 				{
-					LogPrint (eLogWarning, "Missing section ", PEER_PROFILE_SECTION_USAGE, " in profile for ", ident);
+					LogPrint (eLogWarning, "Profiling: Missing section ", PEER_PROFILE_SECTION_USAGE, " in profile for ", ident);
 				}
 			}
 			else

@@ -31,7 +31,7 @@ namespace tunnel
 {
 	Tunnel::Tunnel (std::shared_ptr<const TunnelConfig> config):
 		TunnelBase (config->GetTunnelID (), config->GetNextTunnelID (), config->GetNextIdentHash ()),
-		m_Config (config), m_IsShortBuildMessage (false), m_Pool (nullptr), 
+		m_Config (config), m_IsShortBuildMessage (false), m_Pool (nullptr),
 		m_State (eTunnelStatePending), m_FarEndTransports (i2p::data::RouterInfo::eAllTransports),
 		m_IsRecreated (false), m_Latency (0)
 	{
@@ -176,7 +176,7 @@ namespace tunnel
 			// create tunnel decryptions from layer and iv keys in reverse order
 			m_Hops.resize (numHops);
 			hop = m_Config->GetLastHop ();
-			int i = 0;               
+			int i = 0;
 			while (hop)
 			{
 				m_Hops[i].ident = hop->ident;
@@ -585,7 +585,7 @@ namespace tunnel
 						m_I2NPTunnelEndpointMessagesMemoryPool.CleanUpMt ();
 						m_I2NPTunnelMessagesMemoryPool.CleanUpMt ();
 						lastMemoryPoolTs = ts;
-					}	
+					}
 				}
 			}
 			catch (std::exception& ex)
@@ -810,7 +810,7 @@ namespace tunnel
 				// should be reachable by us because we send build request directly
 				i2p::data::netdb.GetRandomRouter (i2p::context.GetSharedRouterInfo (), false);
 			if (!router) {
-				LogPrint (eLogWarning, "Tunnel: Can't find any router, skipping tunnel creation");
+				LogPrint (eLogWarning, "Tunnel: Can't find any routers, skipping tunnel creation");
 				return;
 			}
 			LogPrint (eLogDebug, "Tunnel: Creating one hop inbound tunnel");
@@ -960,19 +960,19 @@ namespace tunnel
 	std::shared_ptr<I2NPMessage> Tunnels::NewI2NPTunnelMessage (bool endpoint)
 	{
 		if (endpoint)
-	{
-		// should fit two tunnel message + tunnel gateway header, enough for one garlic encrypted streaming packet
-			auto msg = m_I2NPTunnelEndpointMessagesMemoryPool.AcquireSharedMt (); 
-		msg->Align (6);
-		msg->offset += TUNNEL_GATEWAY_HEADER_SIZE; // reserve room for TunnelGateway header
-		return msg;
-		}	
+		{
+			// should fit two tunnel message + tunnel gateway header, enough for one garlic encrypted streaming packet
+			auto msg = m_I2NPTunnelEndpointMessagesMemoryPool.AcquireSharedMt ();
+			msg->Align (6);
+			msg->offset += TUNNEL_GATEWAY_HEADER_SIZE; // reserve room for TunnelGateway header
+			return msg;
+		}
 		else
 		{
-			auto msg = m_I2NPTunnelMessagesMemoryPool.AcquireSharedMt (); 
+			auto msg = m_I2NPTunnelMessagesMemoryPool.AcquireSharedMt ();
 			msg->Align (12);
 			return msg;
-		}	
+		}
 	}
 
 	int Tunnels::GetTransitTunnelsExpirationTimeout ()

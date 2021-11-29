@@ -96,7 +96,7 @@ namespace data
 		std::vector<std::string> yggReseedHostList;
 		if (!i2p::util::net::GetYggdrasilAddress ().is_unspecified ())
 		{
-			LogPrint (eLogInfo, "Reseed: yggdrasil is supported");
+			LogPrint (eLogInfo, "Reseed: Yggdrasil is supported");
 			std::string yggReseedURLs; i2p::config::GetOption("reseed.yggurls", yggReseedURLs);
 			if (!yggReseedURLs.empty ())
 				boost::split(yggReseedHostList, yggReseedURLs, boost::is_any_of(","), boost::token_compress_on);
@@ -414,13 +414,13 @@ namespace data
 				{
 					if (r && ts > r->GetTimestamp () + 10*i2p::data::NETDB_MAX_EXPIRATION_TIMEOUT*1000LL) // 270 hours
 					{
-						LogPrint (eLogError, "Reseed: router ", r->GetIdentHash().ToBase64 (), " is outdated by ", (ts - r->GetTimestamp ())/1000LL/3600LL, " hours");
+						LogPrint (eLogError, "Reseed: Router ", r->GetIdentHash().ToBase64 (), " is outdated by ", (ts - r->GetTimestamp ())/1000LL/3600LL, " hours");
 						numOutdated++;
 					}
 				});
 			if (numOutdated > numFiles/2) // more than half
 			{
-				LogPrint (eLogError, "Reseed: mammoth's shit\n"
+				LogPrint (eLogError, "Reseed: Mammoth's shit\n"
 				"	   *_____*\n"
 				"	  *_*****_*\n"
 				"	 *_(O)_(O)_*\n"
@@ -781,15 +781,15 @@ namespace data
 
 		if (url.host.length () < 2) return ""; // assume []
 		auto host = url.host.substr (1, url.host.length () - 2);
-		LogPrint (eLogDebug, "Reseed: Connecting to yggdrasil ", url.host, ":", url.port);
+		LogPrint (eLogDebug, "Reseed: Connecting to Yggdrasil ", url.host, ":", url.port);
 		s.connect (boost::asio::ip::tcp::endpoint (boost::asio::ip::address_v6::from_string (host), url.port), ecode);
 		if (!ecode)
 		{
-			LogPrint (eLogDebug, "Reseed: Connected to yggdrasil ", url.host, ":", url.port);
+			LogPrint (eLogDebug, "Reseed: Connected to Yggdrasil ", url.host, ":", url.port);
 			return ReseedRequest (s, url.to_string());
 		}
 		else
-			LogPrint (eLogError, "Reseed: Couldn't connect to yggdrasil ", url.host, ": ", ecode.message ());
+			LogPrint (eLogError, "Reseed: Couldn't connect to Yggdrasil ", url.host, ": ", ecode.message ());
 
 		return "";
 	}

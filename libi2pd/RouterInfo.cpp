@@ -102,7 +102,7 @@ namespace data
 		}
 		else
 		{
-			LogPrint (eLogError, "RouterInfo: signature verification failed");
+			LogPrint (eLogError, "RouterInfo: Signature verification failed");
 			m_IsUnreachable = true;
 		}
 	}
@@ -151,7 +151,7 @@ namespace data
 		size_t identityLen = m_RouterIdentity->GetFullLen ();
 		if (identityLen >= m_BufferLen)
 		{
-			LogPrint (eLogError, "RouterInfo: identity length ", identityLen, " exceeds buffer size ", m_BufferLen);
+			LogPrint (eLogError, "RouterInfo: Identity length ", identityLen, " exceeds buffer size ", m_BufferLen);
 			m_IsUnreachable = true;
 			return;
 		}
@@ -168,7 +168,7 @@ namespace data
 			int l = m_BufferLen - m_RouterIdentity->GetSignatureLen ();
 			if (l < 0 || !m_RouterIdentity->Verify ((uint8_t *)m_Buffer, l, (uint8_t *)m_Buffer + l))
 			{
-				LogPrint (eLogError, "RouterInfo: signature verification failed");
+				LogPrint (eLogError, "RouterInfo: Signature verification failed");
 				m_IsUnreachable = true;
 				return;
 			}
@@ -180,7 +180,7 @@ namespace data
 		ReadFromStream (str);
 		if (!str)
 		{
-			LogPrint (eLogError, "RouterInfo: malformed message");
+			LogPrint (eLogError, "RouterInfo: Malformed message");
 			m_IsUnreachable = true;
 		}
 	}
@@ -194,7 +194,7 @@ namespace data
 		// read addresses
 		auto addresses = boost::make_shared<Addresses>();
 		uint8_t numAddresses;
-		s.read ((char *)&numAddresses, sizeof (numAddresses)); 
+		s.read ((char *)&numAddresses, sizeof (numAddresses));
 		addresses->reserve (numAddresses);
 		for (int i = 0; i < numAddresses; i++)
 		{
@@ -283,11 +283,11 @@ namespace data
 						if (s) continue; else return;
 					}
 					if (index >= address->ssu->introducers.size ())
-					{	
+					{
 						if (address->ssu->introducers.empty ()) // first time
 							address->ssu->introducers.reserve (3);
 						address->ssu->introducers.resize (index + 1);
-					}	
+					}
 					Introducer& introducer = address->ssu->introducers.at (index);
 					if (!strcmp (key, "ihost"))
 					{
@@ -431,7 +431,7 @@ namespace data
 			{
 				if (!netdb.GetFamilies ().VerifyFamily (m_Family, GetIdentHash (), value))
 				{
-					LogPrint (eLogWarning, "RouterInfo: family signature verification failed");
+					LogPrint (eLogWarning, "RouterInfo: Family signature verification failed");
 					m_Family.clear ();
 				}
 			}
@@ -789,7 +789,7 @@ namespace data
 
 	bool RouterInfo::SaveToFile (const std::string& fullPath)
 	{
-		if (!m_Buffer) 
+		if (!m_Buffer)
 		{
 			LogPrint (eLogError, "RouterInfo: Can't save, m_Buffer == NULL");
 			return false;

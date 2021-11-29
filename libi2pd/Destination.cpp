@@ -618,7 +618,7 @@ namespace client
 			auto ls = GetLeaseSetMt ();
 			if (!ls)
 			{
-				LogPrint (eLogWarning, "Destination: couldn't verify LeaseSet for ", GetIdentHash().ToBase32());
+				LogPrint (eLogWarning, "Destination: Couldn't verify LeaseSet for ", GetIdentHash().ToBase32());
 				return;
 			}
 			auto s = shared_from_this ();
@@ -630,7 +630,7 @@ namespace client
 						if (*ls == *leaseSet)
 						{
 							// we got latest LeasetSet
-							LogPrint (eLogDebug, "Destination: published LeaseSet verified for ", s->GetIdentHash().ToBase32());
+							LogPrint (eLogDebug, "Destination: Published LeaseSet verified for ", s->GetIdentHash().ToBase32());
 							s->m_PublishVerificationTimer.expires_from_now (boost::posix_time::seconds(PUBLISH_REGULAR_VERIFICATION_INTERNAL));
 							s->m_PublishVerificationTimer.async_wait (std::bind (&LeaseSetDestination::HandlePublishVerificationTimer, s, std::placeholders::_1));
 							return;
@@ -639,7 +639,7 @@ namespace client
 							LogPrint (eLogDebug, "Destination: LeaseSet is different than just published for ", s->GetIdentHash().ToBase32());
 					}
 					else
-						LogPrint (eLogWarning, "Destination: couldn't find published LeaseSet for ", s->GetIdentHash().ToBase32());
+						LogPrint (eLogWarning, "Destination: Couldn't find published LeaseSet for ", s->GetIdentHash().ToBase32());
 					// we have to publish again
 					s->Publish ();
 				});
@@ -1042,7 +1042,7 @@ namespace client
 					LogPrint (eLogError, "Destination: Missing raw datagram destination");
 			break;
 			default:
-				LogPrint (eLogError, "Destination: Data: unexpected protocol ", buf[9]);
+				LogPrint (eLogError, "Destination: Data: Unexpected protocol ", buf[9]);
 		}
 	}
 
@@ -1099,21 +1099,21 @@ namespace client
 	void ClientDestination::SendPing (const i2p::data::IdentHash& to)
 	{
 		if (m_StreamingDestination)
-		{	
+		{
 			auto leaseSet = FindLeaseSet (to);
 			if (leaseSet)
 				m_StreamingDestination->SendPing (leaseSet);
 			else
-			{	
+			{
 				auto s = m_StreamingDestination;
 				RequestDestination (to,
 					[s](std::shared_ptr<const i2p::data::LeaseSet> ls)
 					{
 						if (ls) s->SendPing (ls);
 					});
-			}		
-		}	
-	}	
+			}
+		}
+	}
 
 	void ClientDestination::SendPing (std::shared_ptr<const i2p::data::BlindedPublicKey> to)
 	{
@@ -1122,9 +1122,9 @@ namespace client
 			[s](std::shared_ptr<const i2p::data::LeaseSet> ls)
 			{
 				if (ls) s->SendPing (ls);
-			});                                      
-	}	
-		
+			});
+	}
+
 	std::shared_ptr<i2p::stream::StreamingDestination> ClientDestination::GetStreamingDestination (int port) const
 	{
 		if (port)

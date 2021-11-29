@@ -473,14 +473,14 @@ namespace client
 				pos = name.find(".b32.i2p");
 				if (pos != std::string::npos)
 				{
-					LogPrint (eLogError, "Addressbook: skipped adding of b32 address: ", name);
+					LogPrint (eLogError, "Addressbook: Skipped adding of b32 address: ", name);
 					continue;
 				}
 
 				pos = name.find(".i2p");
 				if (pos == std::string::npos)
 				{
-					LogPrint (eLogError, "Addressbook: malformed domain: ", name);
+					LogPrint (eLogError, "Addressbook: Malformed domain: ", name);
 					continue;
 				}
 
@@ -664,7 +664,7 @@ namespace client
 				if (!m_IsLoaded)
 				{
 					// download it from default subscription
-					LogPrint (eLogInfo, "Addressbook: trying to download it from default subscription.");
+					LogPrint (eLogInfo, "Addressbook: Trying to download it from default subscription.");
 					std::string defaultSubURL; i2p::config::GetOption("addressbook.defaulturl", defaultSubURL);
 					if (!m_DefaultSubscription)
 						m_DefaultSubscription = std::make_shared<AddressBookSubscription>(*this, defaultSubURL);

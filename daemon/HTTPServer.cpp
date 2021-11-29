@@ -1965,7 +1965,7 @@ namespace http {
 			}
 			catch (std::exception& ex)
 			{
-				LogPrint (eLogError, "HTTPServer: runtime exception: ", ex.what ());
+				LogPrint (eLogError, "HTTPServer: Runtime exception: ", ex.what ());
 			}
 		}
 	}

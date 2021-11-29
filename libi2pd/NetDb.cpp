@@ -887,7 +887,7 @@ namespace data
 			if (!r || i2p::util::GetMillisecondsSinceEpoch () > r->GetTimestamp () + 3600*1000LL)
 			{
 				// router with ident not found or too old (1 hour)
-				LogPrint (eLogDebug, "NetDb: Found new/outdated router. Requesting RouterInfo ...");
+				LogPrint (eLogDebug, "NetDb: Found new/outdated router. Requesting RouterInfo...");
 				if(m_FloodfillBootstrap)
 					RequestDestinationFrom(router, m_FloodfillBootstrap->GetIdentHash(), true);
 				else
@@ -1026,10 +1026,10 @@ namespace data
 							replyMsg = garlic.WrapSingleMessage (replyMsg);
 						}
 						if (!replyMsg)
-							LogPrint (eLogError, "NetDb: failed to wrap message");
+							LogPrint (eLogError, "NetDb: Failed to wrap message");
 					}
 					else
-						LogPrint(eLogWarning, "NetDb: encrypted reply requested but no tags provided");
+						LogPrint(eLogWarning, "NetDb: Encrypted reply requested but no tags provided");
 				}
 				auto exploratoryPool = i2p::tunnel::tunnels.GetExploratoryPool ();
 				auto outbound = exploratoryPool ? exploratoryPool->GetNextOutboundTunnel () : nullptr;

@@ -128,7 +128,7 @@ namespace data
 				{
 					LogPrint (eLogError, "Identity: Unexpected excessive signing key len ", excessLen);
 					excessLen = MAX_EXTENDED_BUFFER_SIZE - 4;
-				}	
+				}
 				memcpy (m_ExtendedBuffer + 4, excessBuf, excessLen);
 				delete[] excessBuf;
 			}
@@ -509,7 +509,7 @@ namespace data
 			if (m_Public->GetSignatureLen () + ret > len) return 0;
 			if (!m_Public->Verify (offlineInfo, keyLen + 6, buf + ret))
 			{
-				LogPrint (eLogError, "Identity: offline signature verification failed");
+				LogPrint (eLogError, "Identity: Offline signature verification failed");
 				return 0;
 			}
 			ret += m_Public->GetSignatureLen ();

@@ -490,7 +490,7 @@ namespace garlic
 		uint32_t length = bufbe32toh (buf);
 		if (length > msg->GetLength ())
 		{
-			LogPrint (eLogWarning, "Garlic: message length ", length, " exceeds I2NP message length ", msg->GetLength ());
+			LogPrint (eLogWarning, "Garlic: Message length ", length, " exceeds I2NP message length ", msg->GetLength ());
 			return;
 		}
 		auto mod = length & 0x0f; // %16
@@ -519,7 +519,7 @@ namespace garlic
 					found = true;
 				}
 				else
-					LogPrint (eLogWarning, "Garlic: message length ", length, " is less than 32 bytes");
+					LogPrint (eLogWarning, "Garlic: Message length ", length, " is less than 32 bytes");
 			}
 			if (!found) // assume new session
 			{
@@ -547,13 +547,13 @@ namespace garlic
 						{
 							uint64_t missingTag; memcpy (&missingTag, buf, 8);
 							auto maxTags = std::max (m_NumRatchetInboundTags, ECIESX25519_MAX_NUM_GENERATED_TAGS);
-							LogPrint (eLogWarning, "Garlic: trying to generate more ECIES-X25519-AEAD-Ratchet tags");
+							LogPrint (eLogWarning, "Garlic: Trying to generate more ECIES-X25519-AEAD-Ratchet tags");
 							for (int i = 0; i < maxTags; i++)
 							{
 								auto nextTag = AddECIESx25519SessionNextTag (m_LastTagset);
 								if (!nextTag)
 								{
-									LogPrint (eLogError, "Garlic: can't create new ECIES-X25519-AEAD-Ratchet tag for last tagset");
+									LogPrint (eLogError, "Garlic: Can't create new ECIES-X25519-AEAD-Ratchet tag for last tagset");
 									break;
 								}
 								if (nextTag == missingTag)
@@ -567,7 +567,7 @@ namespace garlic
 							if (!found) m_LastTagset = nullptr;
 						}
 						if (!found)
-							LogPrint (eLogError, "Garlic: can't handle ECIES-X25519-AEAD-Ratchet message");
+							LogPrint (eLogError, "Garlic: Can't handle ECIES-X25519-AEAD-Ratchet message");
 					}
 				}
 				else
@@ -840,7 +840,7 @@ namespace garlic
 				it->second->GetSharedRoutingPath (); // delete shared path if necessary
 				if (!it->second->CleanupExpiredTags ())
 				{
-					LogPrint (eLogInfo, "Routing session to ", it->first.ToBase32 (), " deleted");
+					LogPrint (eLogInfo, "Garlic: Routing session to ", it->first.ToBase32 (), " deleted");
 					it->second->SetOwner (nullptr);
 					it = m_Sessions.erase (it);
 				}
@@ -925,7 +925,7 @@ namespace garlic
 		if (session)
 		{
 			session->MessageConfirmed (msgID);
-			LogPrint (eLogDebug, "Garlic: message ", msgID, " acknowledged");
+			LogPrint (eLogDebug, "Garlic: Message ", msgID, " acknowledged");
 		}
 	}
 
@@ -1105,7 +1105,7 @@ namespace garlic
 			}
 			else
 			{
-				LogPrint (eLogInfo, "Garlic:  ECIESx25519 session with static key ", staticKeyTag.ToBase64 (), " already exists");
+				LogPrint (eLogInfo, "Garlic: ECIESx25519 session with static key ", staticKeyTag.ToBase64 (), " already exists");
 				return;
 			}
 		}

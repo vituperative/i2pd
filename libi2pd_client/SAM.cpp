@@ -670,7 +670,7 @@ namespace client
 						d->SendRawDatagramTo ((const uint8_t *)data, size, dest.GetIdentHash ());
 				}
 				else
-					LogPrint (eLogError, "SAM:Mmissing datagram destination");
+					LogPrint (eLogError, "SAM: Missing datagram destination");
 			}
 			else
 				LogPrint (eLogError, "SAM: Session is not created from DATAGRAM SEND");
@@ -832,7 +832,7 @@ namespace client
 
 	void SAMSocket::SendI2PError(const std::string & msg)
 	{
-		LogPrint (eLogError, "SAM: I2P error ", msg);
+		LogPrint (eLogError, "SAM: I2P error: ", msg);
 #ifdef _MSC_VER
 		size_t len = sprintf_s (m_Buffer, SAM_SOCKET_BUFFER_SIZE, SAM_SESSION_STATUS_I2P_ERROR, msg.c_str());
 #else
@@ -1170,7 +1170,7 @@ namespace client
 					WriteI2PData(len + l);
 				}
 				else
-					LogPrint (eLogWarning, "SAM: Received raw datagram; size ", len," exceeds buffer");
+					LogPrint (eLogWarning, "SAM: Received raw datagram size ", len," exceeds buffer");
 			}
 		}
 	}
@@ -1332,7 +1332,7 @@ namespace client
 				socket->ReceiveHandshake ();
 			}
 			else
-				LogPrint (eLogError, "SAM: Incoming connection error ", ec.message ());
+				LogPrint (eLogError, "SAM: Incoming connection error: ", ec.message ());
 		}
 		else
 			LogPrint (eLogError, "SAM: Accept error: ", ecode.message ());

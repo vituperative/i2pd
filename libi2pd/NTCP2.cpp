@@ -857,10 +857,10 @@ namespace transport
 			switch (blk)
 			{
 				case eNTCP2BlkDateTime:
-					LogPrint (eLogDebug, "NTCP2: datetime");
+					LogPrint (eLogDebug, "NTCP2: Datetime");
 				break;
 				case eNTCP2BlkOptions:
-					LogPrint (eLogDebug, "NTCP2: options");
+					LogPrint (eLogDebug, "NTCP2: Options");
 				break;
 				case eNTCP2BlkRouterInfo:
 				{

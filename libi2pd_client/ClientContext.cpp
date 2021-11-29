@@ -185,7 +185,7 @@ namespace client
 		LogPrint(eLogInfo, "Clients: Stopping AddressBook");
 		m_AddressBook.Stop ();
 
-	{
+		{
 			std::lock_guard<std::mutex> lock(m_ForwardsMutex);
 			m_ServerForwards.clear();
 			m_ClientForwards.clear();
@@ -720,10 +720,10 @@ namespace client
 					std::shared_ptr<ClientDestination> localDestination = nullptr;
 					auto it = destinations.find (keys);
 					if (it != destinations.end ())
-					{	
+					{
 						localDestination = it->second;
 						localDestination->SetPublic (true);
-					}	
+					}
 					else
 					{
 						i2p::data::PrivateKeys k;
@@ -787,7 +787,7 @@ namespace client
 						serverTunnel->SetLocalAddress (address);
 					if(!isUniqueLocal)
 					{
-						LogPrint(eLogInfo, "Clients: disabling loopback address mapping");
+						LogPrint(eLogInfo, "Clients: Disabling loopback address mapping");
 						serverTunnel->SetUniqueLocal(isUniqueLocal);
 					}
 					if (accessList.length () > 0)
@@ -910,7 +910,7 @@ namespace client
 					if (localDestination) localDestination->Acquire ();
 				}
 				else
-					LogPrint(eLogError, "Clients: failed to load SOCKS Proxy key");
+					LogPrint(eLogError, "Clients: Failed to load SOCKS Proxy key");
 			}
 			try
 			{
@@ -960,7 +960,7 @@ namespace client
 		}
 
 		for (auto it = m_ServerTunnels.begin (); it != m_ServerTunnels.end ();)
-			{
+		{
 			if(clean && !it->second->isUpdated) {
 				it->second->Stop ();
 				it = m_ServerTunnels.erase(it);
@@ -979,11 +979,11 @@ namespace client
 			} else {
 				it->second->isUpdated = false;
 				it++;
+			}
 		}
-	}
 
 		for (auto it = m_ServerForwards.begin (); it != m_ServerForwards.end ();)
-	{
+		{
 			if(clean && !it->second->isUpdated) {
 				it->second = nullptr;
 				it = m_ServerForwards.erase(it);

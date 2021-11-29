@@ -193,7 +193,7 @@ namespace client
 					std::placeholders::_1, std::placeholders::_2));
 		}
 		else
-			LogPrint(eLogError, "TCPIPPipe: Upstream receive: no socket");
+			LogPrint(eLogError, "TCPIPPipe: Upstream receive: No socket");
 	}
 
 	void TCPIPPipe::AsyncReceiveDownstream()
@@ -204,7 +204,7 @@ namespace client
 					std::placeholders::_1, std::placeholders::_2));
 		}
 		else
-			LogPrint(eLogError, "TCPIPPipe: Downstream receive: no socket");
+			LogPrint(eLogError, "TCPIPPipe: Downstream receive: No socket");
 	}
 
 	void TCPIPPipe::UpstreamWrite(size_t len)
@@ -234,7 +234,7 @@ namespace client
 					std::placeholders::_1));
 		}
 		else
-			LogPrint(eLogError, "TCPIPPipe: Downstream write: no socket");
+			LogPrint(eLogError, "TCPIPPipe: Downstream write: No socket");
 	}
 
 

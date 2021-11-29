@@ -124,7 +124,7 @@ namespace proxy {
 
 	void HTTPReqHandler::AsyncSockRead()
 	{
-		LogPrint(eLogDebug, "HTTPProxy: async socket read");
+		LogPrint(eLogDebug, "HTTPProxy: Async sock read");
 		if (!m_sock) {
 			LogPrint(eLogError, "HTTPProxy: No socket for read");
 			return;
@@ -412,7 +412,7 @@ namespace proxy {
 
 	void HTTPReqHandler::ForwardToUpstreamProxy()
 	{
-		LogPrint(eLogDebug, "HTTPProxy: Forward to upstream");
+		LogPrint(eLogDebug, "HTTPProxy: Forwarded to upstream");
 		// build http request
 
 		m_ClientRequestURL = m_RequestURL;

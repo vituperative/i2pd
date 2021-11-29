@@ -114,7 +114,7 @@ namespace tunnel
 		{
 			std::unique_lock<std::mutex> l(m_InboundTunnelsMutex);
 			if (createdTunnel->IsRecreated ())
-			{	
+			{
 				// find and mark old tunnel as expired
 				createdTunnel->SetRecreated (false);
 				for (auto& it: m_InboundTunnels)
@@ -122,8 +122,8 @@ namespace tunnel
 					{
 						it->SetState (eTunnelStateExpiring);
 						break;
-					}	
-			}	
+					}
+			}
 			m_InboundTunnels.insert (createdTunnel);
 		}
 		if (m_LocalDestination)
@@ -205,7 +205,7 @@ namespace tunnel
 	}
 
 	template<class TTunnels>
-	typename TTunnels::value_type TunnelPool::GetNextTunnel (TTunnels& tunnels, 
+	typename TTunnels::value_type TunnelPool::GetNextTunnel (TTunnels& tunnels,
 		typename TTunnels::value_type excluded, i2p::data::RouterInfo::CompatibleTransports compatible) const
 	{
 		if (tunnels.empty ()) return nullptr;
@@ -531,11 +531,11 @@ namespace tunnel
 			if (r)
 			{
 				if (r->IsECIES ())
-				{	
-				path.Add (r);
+				{
+					path.Add (r);
 					if (i == numHops - 1)
 						path.farEndTransports = r->GetCompatibleTransports (isInbound);
-				}	
+				}
 				else
 				{
 					LogPrint (eLogError, "Tunnels: ElGamal router ", ident.ToBase64 (), " is not supported");
@@ -600,11 +600,11 @@ namespace tunnel
 	}
 
 	void TunnelPool::CreateOutboundTunnel ()
+	{
+		LogPrint (eLogDebug, "Tunnels: Creating destination outbound tunnel...");
+		Path path;
+		if (SelectPeers (path, false))
 		{
-			LogPrint (eLogDebug, "Tunnels: Creating destination outbound tunnel...");
-			Path path;
-			if (SelectPeers (path, false))
-			{
 			auto inboundTunnel = GetNextInboundTunnel (nullptr, path.farEndTransports);
 			if (!inboundTunnel)
 				inboundTunnel = tunnels.GetNextInboundTunnel ();
@@ -612,15 +612,15 @@ namespace tunnel
 			{
 				LogPrint (eLogError, "Tunnels: Can't create outbound tunnel, no inbound tunnels found");
 				return;
-			}	
-			
-				if (m_LocalDestination && !m_LocalDestination->SupportsEncryptionType (i2p::data::CRYPTO_KEY_TYPE_ECIES_X25519_AEAD))
-					path.isShort = false; // because can't handle ECIES encrypted reply
-				
-				std::shared_ptr<TunnelConfig> config;
-				if (m_NumOutboundHops > 0)
-					config = std::make_shared<TunnelConfig>(path.peers, inboundTunnel->GetNextTunnelID (), 
-						inboundTunnel->GetNextIdentHash (), path.isShort, path.farEndTransports);
+			}
+
+			if (m_LocalDestination && !m_LocalDestination->SupportsEncryptionType (i2p::data::CRYPTO_KEY_TYPE_ECIES_X25519_AEAD))
+				path.isShort = false; // because can't handle ECIES encrypted reply
+
+			std::shared_ptr<TunnelConfig> config;
+			if (m_NumOutboundHops > 0)
+				config = std::make_shared<TunnelConfig>(path.peers, inboundTunnel->GetNextTunnelID (),
+					inboundTunnel->GetNextIdentHash (), path.isShort, path.farEndTransports);
 
 			std::shared_ptr<OutboundTunnel> tunnel;
 			if (path.isShort)
@@ -628,8 +628,8 @@ namespace tunnel
 				// TODO: implement it better
 				tunnel = tunnels.CreateOutboundTunnel (config, inboundTunnel->GetTunnelPool ());
 				tunnel->SetTunnelPool (shared_from_this ());
-			}	
-			else	
+			}
+			else
 				tunnel = tunnels.CreateOutboundTunnel (config, shared_from_this ());
 			if (tunnel && tunnel->IsEstablished ()) // zero hops
 				TunnelCreated (tunnel);
@@ -654,7 +654,7 @@ namespace tunnel
 			std::shared_ptr<TunnelConfig> config;
 			if (m_NumOutboundHops > 0 && tunnel->GetPeers().size())
 			{
-				config = std::make_shared<TunnelConfig>(tunnel->GetPeers (), inboundTunnel->GetNextTunnelID (), 
+				config = std::make_shared<TunnelConfig>(tunnel->GetPeers (), inboundTunnel->GetNextTunnelID (),
 					inboundTunnel->GetNextIdentHash (), inboundTunnel->IsShortBuildMessage (), tunnel->GetFarEndTransports ());
 			}
 			if (!m_NumOutboundHops || config)
@@ -673,7 +673,7 @@ namespace tunnel
 		LogPrint (eLogDebug, "Tunnels: Creating paired inbound tunnel...");
 		auto tunnel = tunnels.CreateInboundTunnel (
 			m_NumOutboundHops > 0 ? std::make_shared<TunnelConfig>(outboundTunnel->GetInvertedPeers (),
-				outboundTunnel->IsShortBuildMessage ()) : nullptr, 
+				outboundTunnel->IsShortBuildMessage ()) : nullptr,
 		    shared_from_this (), outboundTunnel);
 		if (tunnel->IsEstablished ()) // zero hops
 			TunnelCreated (tunnel);

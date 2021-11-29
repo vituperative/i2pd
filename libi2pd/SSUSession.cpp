@@ -79,7 +79,7 @@ namespace transport
 				nonZero++;
 				if (nonZero - sharedKey > 32)
 				{
-					LogPrint (eLogWarning, "SSU: first 32 bytes of shared key is all zeros. Ignored");
+					LogPrint (eLogWarning, "SSU: First 32 bytes of shared key is all zeros. Ignored");
 					return;
 				}
 			}
@@ -158,7 +158,7 @@ namespace transport
 		auto headerSize = GetSSUHeaderSize (buf);
 		if (headerSize >= len)
 		{
-			LogPrint (eLogError, "SSU header size ", headerSize, " exceeds packet length ", len);
+			LogPrint (eLogError, "SSU: Header size ", headerSize, " exceeds packet length ", len);
 			return;
 		}
 		SSUHeader * header = (SSUHeader *)buf;
@@ -206,7 +206,7 @@ namespace transport
 
 	void SSUSession::ProcessSessionRequest (const uint8_t * buf, size_t len)
 	{
-		LogPrint (eLogDebug, "SSU: Session request");
+		LogPrint (eLogDebug, "SSU message: Session request");
 		bool sendRelayTag = true;
 		auto headerSize = sizeof (SSUHeader);
 		if (((SSUHeader *)buf)->IsExtendedOptions ())
@@ -222,7 +222,7 @@ namespace transport
 		}
 		if (headerSize >= len)
 		{
-			LogPrint (eLogError, "SSU: Session request header size ", headerSize, " exceeds packet length ", len);
+			LogPrint (eLogError, "SSU message: Session request header size ", headerSize, " exceeds packet length ", len);
 			return;
 		}
 		if (!m_DHKeysPair)
@@ -243,13 +243,13 @@ namespace transport
 			return;
 		}
 
-		LogPrint (eLogDebug, "SSU: Session created");
+		LogPrint (eLogDebug, "SSU message: session created");
 		m_ConnectTimer.cancel (); // connect timer
 		SignedData s; // x,y, our IP, our port, remote IP, remote port, relayTag, signed on time
 		auto headerSize = GetSSUHeaderSize (buf);
 		if (headerSize >= len)
 		{
-			LogPrint (eLogError, "SSU: Session created header size ", headerSize, " exceeds packet length ", len);
+			LogPrint (eLogError, "SSU message: Session created header size ", headerSize, " exceeds packet length ", len);
 			return;
 		}
 		uint8_t * payload = buf + headerSize;
@@ -438,7 +438,7 @@ namespace transport
 		else
 			FillHeaderAndEncrypt (PAYLOAD_TYPE_RELAY_REQUEST, buf, 96, introducer.iKey, iv, introducer.iKey);
 		m_Server.Send (buf, 96, m_RemoteEndpoint);
-		LogPrint (eLogDebug, "SSU: relay request sent");
+		LogPrint (eLogDebug, "SSU: Relay request sent");
 	}
 
 	void SSUSession::SendSessionCreated (const uint8_t * x, bool sendRelayTag)
@@ -1201,7 +1201,7 @@ namespace transport
 	void SSUSession::SendPeerTest ()
 	{
 		// we are Alice
-		LogPrint (eLogDebug, "SSU: Initiating peer test");
+		LogPrint (eLogDebug, "SSU: Initiating peer test...");
 		auto address = IsV6 () ? i2p::context.GetRouterInfo ().GetSSUV6Address () : i2p::context.GetRouterInfo ().GetSSUAddress (true);
 		if (!address)
 		{

@@ -195,7 +195,7 @@ namespace transport
 						LogPrint(eLogError, "Transports: Unsupported NTCP2 proxy URL ", ntcp2proxy);
 				}
 				else
-					LogPrint(eLogError, "Transports: invalid NTCP2 proxy URL ", ntcp2proxy);
+					LogPrint(eLogError, "Transports: Invalid NTCP2 proxy URL ", ntcp2proxy);
 			}
 			else
 				m_NTCP2Server = new NTCP2Server ();
@@ -554,13 +554,13 @@ namespace transport
 		{
 			if (r)
 			{
-				LogPrint (eLogDebug, "Transports: RouterInfo for ", ident.ToBase64 (), " found, Trying to connect");
+				LogPrint (eLogDebug, "Transports: RouterInfo for ", ident.ToBase64 (), " found, trying to connect");
 				it->second.router = r;
 				ConnectToPeer (ident, it->second);
 			}
 			else
 			{
-				LogPrint (eLogWarning, "Transports: RouterInfo not found, Failed to send messages");
+				LogPrint (eLogWarning, "Transports: RouterInfo not found, failed to send messages");
 				std::unique_lock<std::mutex> l(m_PeersMutex);
 				m_Peers.erase (it);
 			}
@@ -571,7 +571,7 @@ namespace transport
 	{
 		if (RoutesRestricted())
 		{
-			LogPrint(eLogInfo, "Transports: restricted routes enabled, not detecting ip");
+			LogPrint(eLogInfo, "Transports: Restricted routes enabled, not detecting IP");
 			i2p::context.SetStatus (eRouterStatusOK);
 			return;
 		}
@@ -586,7 +586,7 @@ namespace transport
 		if (RoutesRestricted() || !m_SSUServer) return;
 		if (ipv4 && i2p::context.SupportsV4 ())
 		{
-			LogPrint (eLogInfo, "Transports: Started peer test ipv4");
+			LogPrint (eLogInfo, "Transports: Started peer test IPv4");
 			std::set<i2p::data::IdentHash> excluded;
 			bool statusChanged = false;
 			for (int i = 0; i < 5; i++)
@@ -608,11 +608,11 @@ namespace transport
 				}
 			}
 			if (!statusChanged)
-				LogPrint (eLogWarning, "Transports: Can't find routers for peer test ipv4");
+				LogPrint (eLogWarning, "Transports: Can't find routers for IPv4 peer test");
 		}
 		if (ipv6 && i2p::context.SupportsV6 ())
 		{
-			LogPrint (eLogInfo, "Transports: Started peer test ipv6");
+			LogPrint (eLogInfo, "Transports: Started IPv6 peer test");
 			std::set<i2p::data::IdentHash> excluded;
 			bool statusChanged = false;
 			for (int i = 0; i < 5; i++)
@@ -634,7 +634,7 @@ namespace transport
 				}
 			}
 			if (!statusChanged)
-				LogPrint (eLogWarning, "Transports: Can't find routers for peer test ipv6");
+				LogPrint (eLogWarning, "Transports: Can't find routers for IPv6 peer test");
 		}
 	}
 

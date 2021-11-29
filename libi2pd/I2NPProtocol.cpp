@@ -171,7 +171,7 @@ namespace i2p
 	std::shared_ptr<I2NPMessage> CreateLeaseSetDatabaseLookupMsg (const i2p::data::IdentHash& dest,
 		const std::set<i2p::data::IdentHash>& excludedFloodfills,
 		std::shared_ptr<const i2p::tunnel::InboundTunnel> replyTunnel, const uint8_t * replyKey,
-	    const uint8_t * replyTag, bool replyECIES)
+		    const uint8_t * replyTag, bool replyECIES)
 	{
 		int cnt = excludedFloodfills.size ();
 		auto m = cnt > 7 ? NewI2NPMessage () : NewI2NPShortMessage ();
@@ -244,7 +244,7 @@ namespace i2p
 	}
 
 	std::shared_ptr<I2NPMessage> CreateDatabaseStoreMsg (std::shared_ptr<const i2p::data::RouterInfo> router,
-		uint32_t replyToken, std::shared_ptr<const i2p::tunnel::InboundTunnel> replyTunnel)
+	    uint32_t replyToken, std::shared_ptr<const i2p::tunnel::InboundTunnel> replyTunnel)
 	{
 		if (!router) // we send own RouterInfo
 			router = context.GetSharedRouterInfo ();

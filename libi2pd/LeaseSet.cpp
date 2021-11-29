@@ -61,7 +61,7 @@ namespace data
 		size_t size = m_Identity->GetFullLen ();
 		if (size > m_BufferLen)
 		{
-			LogPrint (eLogError, "LeaseSet: identity length ", size, " exceeds buffer size ", m_BufferLen);
+			LogPrint (eLogError, "LeaseSet: Identity length ", size, " exceeds buffer size ", m_BufferLen);
 			m_IsValid = false;
 			return;
 		}
@@ -80,7 +80,7 @@ namespace data
 		}
 		uint8_t num = m_Buffer[size];
 		size++; // num
-		LogPrint (eLogDebug, "LeaseSet: read num=", (int)num);
+		LogPrint (eLogDebug, "LeaseSet: Read num=", (int)num);
 		if (!num || num > MAX_NUM_LEASES)
 		{
 			LogPrint (eLogError, "LeaseSet: Incorrect number of leases", (int)num);

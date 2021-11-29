@@ -191,7 +191,7 @@ namespace proxy
 
 	void SOCKSHandler::AsyncSockRead()
 	{
-		LogPrint(eLogDebug, "SOCKS: async socket read");
+		LogPrint(eLogDebug, "SOCKS: Async sock read");
 		if (m_sock) {
 			m_sock->async_receive(boost::asio::buffer(m_sock_buff, socks_buffer_size),
 				std::bind(&SOCKSHandler::HandleSockRecv, shared_from_this(),
@@ -558,7 +558,7 @@ namespace proxy
 					if (m_parseleft == 0) EnterState(GET_PORT);
 				break;
 				default:
-					LogPrint(eLogError, "SOCKS: parse state?? ", m_state);
+					LogPrint(eLogError, "SOCKS: Parse state?? ", m_state);
 					Terminate();
 					return false;
 			}
@@ -579,7 +579,7 @@ namespace proxy
 		LogPrint(eLogDebug, "SOCKS: Received ", len, " bytes");
 		if(ecode)
 		{
-			LogPrint(eLogWarning, "SOCKS: Receive error: ", ecode);
+			LogPrint(eLogWarning, "SOCKS: Recv got error: ", ecode);
 			Terminate();
 			return;
 		}
@@ -668,7 +668,7 @@ namespace proxy
 
 	void SOCKSHandler::AsyncUpstreamSockRead()
 	{
-		LogPrint(eLogDebug, "SOCKS: async upstream socket read");
+		LogPrint(eLogDebug, "SOCKS: Async upstream socket read");
 		if (m_upstreamSock) {
 			m_upstreamSock->async_read_some(boost::asio::buffer(m_upstream_response, SOCKS_UPSTREAM_SOCKS4A_REPLY_SIZE),
 				std::bind(&SOCKSHandler::HandleUpstreamSockRecv, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
