@@ -44,11 +44,20 @@
 	--reloadcss: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23e3dbdb' d='M0 0h45.71v64H0z'/%3E%3Cpath fill='%2304a' d='M19.47 39.69H4.24a1.05 1.05 0 110-2.11h15.23a1.05 1.05 0 110 2.1zm11.57 13.79H4.24a1.05 1.05 0 110-2.1h26.8a1.05 1.05 0 110 2.1zm-6-6.9H4.24a1.05 1.05 0 110-2.1h20.8a1.05 1.05 0 110 2.1zm8 13.8H4.24a1.05 1.05 0 110-2.1h28.8a1.05 1.05 0 110 2.1zM12.3 4.34q-1.52.5-2.43 1.73-.92 1.23-.92 2.8 0 .8.25 2.31.23 1.57.23 2.36 0 1.55-.7 2.47-.45.6-2.01 1.66-.82.57-1.26.82-.82.47-1.34.57 2 .29 3.6 1.98 1.55 1.71 1.55 3.73 0 .76-.23 2.28-.24 1.56-.24 2.32 0 1.48.97 2.68.92 1.17 2.37 1.68v.75h-.1q-2.4 0-4.26-1.55-1.98-1.64-1.98-4 0-.92.37-2.77.32-1.83.32-2.75 0-1.25-1.06-2.4-.95-1.03-2.24-1.5v-.95q.96-.3 2.08-1.26 1.1-.92 1.32-1.78.06-.27.06-1 0-.92-.35-2.77-.37-1.8-.37-2.74 0-2.28 2.08-3.9 1.92-1.46 4.3-1.46zm13.41 15.17q-.76.05-1.98 1.16-1.21 1.13-1.42 1.92-.1.4-.1.92 0 .94.4 2.71.36 1.83.36 2.75 0 2.35-2.05 3.96-1.92 1.49-4.32 1.49v-.7q1.48-.5 2.4-1.7.94-1.2.94-2.75 0-.8-.23-2.32-.27-1.52-.27-2.3 0-1.53.72-2.53.53-.66 2.02-1.7.82-.57 1.26-.83.82-.47 1.35-.56-2.01-.31-3.6-1.99-1.6-1.7-1.6-3.7 0-.77.2-2.32.21-1.55.21-2.3 0-1.49-.89-2.68-.93-1.16-2.38-1.65v-.77h.06q2.36 0 4.26 1.53 2.05 1.58 2.05 3.89 0 .93-.37 2.79-.36 1.84-.36 2.76 0 1.29 1.07 2.45.95 1.05 2.27 1.52z'/%3E%3Cpath fill='%23141' stroke='%23025' stroke-linejoin='round' stroke-width='3.66' d='M41.38 10.81v3.37a17.64 17.64 0 00-15.22 17.78 17.64 17.64 0 0017.42 17.86v.08h.14l3.22 3.29v-3.37a17.64 17.64 0 0015.23-17.86 17.64 17.64 0 00-17.42-17.78v0-.08h-.15zm0 11.27v5.13l4.98-5.13a10.1 10.1 0 01.58 19.76v-5.12l-5.05 5.12a10.1 10.1 0 01-8.2-9.95c0-4.76 3.3-8.78 7.69-9.8z'/%3E%3Cpath fill='%23aef' d='M43.58 14.03h1.1l-1.1 5.05v2.64a10.1 10.1 0 00-9.89 10.1 10.1 10.1 0 009.89 10.1l1.1-.15-1.1 7.83a17.57 17.57 0 01-17.42-17.64 17.64 17.64 0 0117.42-17.93z'/%3E%3Cpath fill='none' stroke='%23025' stroke-width='3.66' d='M47.02 36.8l-8.2 8.12 8.2 8.2'/%3E%3Cg fill='%2300aad4'%3E%3Cpath d='M44.67 49.9h-1.02l1.02-5.06v-2.7a10.1 10.1 0 000-20.2l-1.1.07 1.1-7.83a17.71 17.71 0 0117.5 17.86 17.64 17.64 0 01-17.5 17.86z'/%3E%3Cpath d='M46.94 53.04V36.8l-8.2 8.13z'/%3E%3C/g%3E%3Cpath fill='none' stroke='%23025' stroke-width='3.5' d='M41.3 27.13l8.2-8.12-8.27-8.27'/%3E%3Cpath fill='%23aef' d='M41.38 10.81v16.32l8.2-8.12z'/%3E%3C/svg%3E");
 	--ping:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23dbd' d='M32.6 4.14a28.06 28.06 0 00-25.38 16.2c-4.6 9.6-3 21.77 3.96 29.84a28.1 28.1 0 0028.65 9.02 28.1 28.1 0 0020.35-22.22 28.1 28.1 0 00-11.56-27.8A27.87 27.87 0 0032.6 4.14zm0 6.07a22 22 0 0119.92 12.74 21.94 21.94 0 11-41.56 12.83 22.03 22.03 0 019.2-21.72 21.98 21.98 0 0112.43-3.86zm0 13.4a8.6 8.6 0 00-8.23 6.2 8.6 8.6 0 003 9.1 8.6 8.6 0 009.43.68 8.58 8.58 0 004.3-8.38 8.6 8.6 0 00-8.52-7.63z'/%3E%3C/svg%3E");
 	/* theme colors */
+	--container: linear-gradient(to bottom, rgba(96,16,96,.15), rgba(160,56,160,.15));
+	--container_shadow: 0 0 0 1px rgba(255,160,255,.3), inset 0 0 0 2px #000, inset 0 0 0 3px #303;
 	--scrollbar: #414 #101;
+	--bodybg: linear-gradient(to bottom, rgba(0,0,0,.1), rgba(32,0,32,.1), rgba(0,0,0,.1));
+	--note: radial-gradient(at bottom center, rgba(48,8,48,.3), rgba(0,0,0,0) 70%), linear-gradient(to bottom, rgba(32,0,32,.2), rgba(24,0,24,.2));
+	--note_shadow: inset 0 0 0 1px rgba(96,0,96,.2), var(--outline);
+	--notify: #fff;
 	--ink: #dbd;
 	--ink-darker: #b9b;
-	--ink-faded: rgba(221,187,221, .5);
-	--notify: #5f5;
+	--ink-faded: rgba(221,187,221,.5);
+	--ink_tooltip: #444;
+	--notify: #fff;
+	--notify_bg: linear-gradient(to bottom, rgba(32,0,32,.5), rgba(4,0,4,.7));
+	--notify_shadow: var(--highlight), inset 0 0 3px 3px rgba(0,0,0,.6);
 	--page: #120012;
 	--main-boxshadow: 0 0 0 1px var(--border), 0 0 0 2px #000, 0 0 0 4px #313, 0 0 0 5px #212, 0 0 0 6px #101;
 	--link: #ae6ba8;
@@ -62,21 +71,27 @@
 	--active_shadow: inset 3px 3px 3px rgba(0,0,0,.8);
 	--hr: linear-gradient(to right, #313, #414, #313);
 	--highlight: inset 0 0 0 1px #101;
+	--outline: 0 0 0 1px #000;
+	--table: repeating-linear-gradient(to bottom, rgba(24,0,24,.3) 2px, rgba(48,0,48,.3) 4px), repeating-linear-gradient(to right, rgba(48,0,48,.8) 2px, rgba(24,0,24,.5) 4px), linear-gradient(to bottom, #240024, #200020);
 	--tr: #180818;
 	--tr-alt: #202;
 	--tr-inner: #240024;
+	--td_odd: linear-gradient(to bottom, rgba(16,0,16,.5), rgba(8,0,8,.5));
+	--tr_even: linear-gradient(to bottom, rgba(32,0,32,.5), rgba(24,0,24,.5));
 	--header: linear-gradient(to bottom, #202, #101 50%, #101 50%, #000);
-	--th: linear-gradient(to bottom, #180018, #080008);
-	--th_multicolumn: linear-gradient(to bottom, #202, #101);
+	--th: linear-gradient(to bottom, #202, #101);
 	--sectiontitle: linear-gradient(to bottom, #240024, #140014 50%, #140014 50%, #080008);
 	--section: linear-gradient(to bottom, rgba(0,0,0,.5), rgba(8,0,8,.5));
 	--b64: #101;
 	--b64-ink: #2475c2;
-	--b64-boxshadow: 0 0 0 1px #000, inset 0 0 0 1px #202;
+	--b64-boxshadow: var(--outline), inset 0 0 0 1px #202;
 	--input_text: var(--button-border);
 	--menu: #303;
 	--menu-ink: #fff;
+	--bg_hover: #505;
 	--textshadow: 0 1px 1px rgba(0,0,0.7);
+	--tooltip_shadow: 0 0 1px 1px rgba(0,0,0,.2);
+	--slide: linear-gradient(to bottom, rgba(48,8,48,.5), rgba(0,0,0,.8));
 }
 
 ::selection {
@@ -106,7 +121,7 @@ body {
 	text-align: center;
 	font: 14pt var(--bodyfont);
 	color: var(--ink);
-	background: linear-gradient(to bottom, rgba(0,0,0,.1), rgba(32,0,32,.1), rgba(0,0,0,.1));
+	background: var(--bodybg);
 	background-attachment: fixed, fixed, fixed !important;
 }
 
@@ -228,9 +243,17 @@ a, .slide label {
 }
 
 #netstatus .badge {
-	margin: 0 8px 0 0;
+	margin: 0 4px;
 	padding: 1px 6px;
 	font-weight: 600;
+}
+
+#netstatus > .badge {
+	margin-left: 0;
+}
+
+#netstatus > .badge ~ .badge {
+	margin-left: 8px;
 }
 
 label:hover .badge {
@@ -372,7 +395,7 @@ select, input[type=number] {
 	box-sizing: border-box;
 	font-size: 90% !important;
 	background: var(--input_text);
-	text-shadow: 0 1px 1px rgba(0,0,0,.6);
+	text-shadow: var(--textshadow);
 }
 
 input[type=number] {
@@ -411,10 +434,9 @@ select, option:hover, option:focus, option:active {
 	margin: 0 -6px;
 	padding: 15px 12px !important;
 	font-size: 95%;
-	border: 1px solid #414;
-	background: radial-gradient(at bottom center, rgba(48,8,48,.3), rgba(0,0,0,0) 70%),
-				linear-gradient(to bottom, rgba(32,0,32,.2), rgba(24,0,24,.2));
-	box-shadow: inset 0 0 0 1px rgba(96,0,96,.2), 0 0 0 1px #000;
+	border: 1px solid var(--border2);
+	background: var(--note);
+	box-shadow: var(note_shadow);
 	white-space: normal;
 }
 
@@ -432,16 +454,14 @@ select, option:hover, option:focus, option:active {
 	display: inline-block;
 	margin: 4px 2px;
 	padding: 2px 10px 2px 25px;
-	background: #303 var(--yes) no-repeat 8px center / 10px;
+	background: var(--menu) var(--yes) no-repeat 8px center / 10px;
 	border-radius: 2px;
 	text-align: left;
 	font-size: 90%;
 }
 
 table {
-	background: repeating-linear-gradient(to bottom, rgba(24,0,24,.3) 2px, rgba(48,0,48,.3) 4px),
-				repeating-linear-gradient(to right, rgba(48,0,48,.8) 2px, rgba(24,0,24,.5) 4px),
-				linear-gradient(to bottom, #240024, #200020);
+	background: var(--table);
 	background-size: 100% 4px, 4px 100%, 100%;
 }
 
@@ -452,12 +472,12 @@ tr {
 
 tr#version, tr#version ~ tr:nth-child(odd), tr.chrome, .listitem:nth-child(odd),
 tr:not(.chrome):nth-child(odd), #routerinfos tr:nth-child(odd), #tunnelsummary tr:nth-child(even) {
-	background: linear-gradient(to bottom, rgba(16,0,16,.5), rgba(8,0,8,.5));
+	background: var(--tr_odd);
 }
 
 tr#version ~ tr:nth-child(even), .listitem:nth-child(even),
 tr:not(.chrome):nth-child(even), #routerinfos tr:nth-child(even), #tunnelsummary tr:nth-child(odd) {
-	background: linear-gradient(to bottom, rgba(32,0,32,.5), rgba(24,0,24,.5));
+	background: var(--tr_even);
 }
 
 tr tr, .tableitem tr:nth-child(odd) {
@@ -465,7 +485,7 @@ tr tr, .tableitem tr:nth-child(odd) {
 }
 
 tr.chrome {
-	background: linear-gradient(to bottom, rgba(16,0,16,.5), rgba(8,0,8,.5));
+	background: var(--tr_odd);
 }
 
 .tableitem tr:nth-child(even) {
@@ -485,7 +505,7 @@ th, td {
 th {
 	padding: 6px 12px;
 	font-weight: 600;
-	background: var(--th_multicolumn);
+	background: var(--th);
 }
 
 th.in, th.out {
@@ -493,15 +513,15 @@ th.in, th.out {
 }
 
 th.in {
-	background: var(--arrow_down) no-repeat center center / 14px, var(--th_multicolumn);
+	background: var(--arrow_down) no-repeat center center / 14px, var(--th);
 }
 
 th.out {
-	background: var(--arrow_up) no-repeat center center / 14px, var(--th_multicolumn);
+	background: var(--arrow_up) no-repeat center center / 14px, var(--th);
 }
 
 th, #routerservices {
-	background: linear-gradient(to right, rgba(0,0,0,.4), rgba(0,0,0,0), rgba(0,0,0,.4)), rgba(32,0,32,.4);
+	background: var(--th);
 }
 
 .slide label {
@@ -520,12 +540,16 @@ th {
 	border-bottom: 1px solid var(--border) !important;
 }
 
+.chrome td {
+	background: var(--th);
+}
+
 .sectiontitle th {
 	padding: 0 0 10px !important;
 	font-weight: 700;
 	font-size: 95%;
 	border-bottom: none;
-	background: var(--th_multicolumn);
+	background: var(--th);
 }
 
 .sectiontitle span:not(.routerservice):not(.hide):not(.badge) {
@@ -594,10 +618,10 @@ td:last-child {
 .error, .notify {
 	padding: 0;
 	font-size: 110%;
-	color: #fff;
-	box-shadow: var(--highlight), inset 0 0 3px 3px rgba(0,0,0,.6);
+	color: var(--notify);
+	box-shadow: var(--notify_shadow);
 	text-align: center;
-	background: linear-gradient(to bottom, rgba(32,0,32,.5), rgba(4,0,4,.7));
+	background: var(--notify_bg);
 }
 
 .toast + .toast {
@@ -609,10 +633,10 @@ td:last-child {
 	padding: 40px 20px;
 	display: inline-block;
 	width: calc(100% - 24px);
-	background: linear-gradient(to bottom, rgba(96,16,96,.15), rgba(160,56,160,.15));
-	box-shadow: 0 0 0 1px rgba(255,160,255,.3), inset 0 0 0 2px #000, inset 0 0 0 3px #303;
+	background: var(--container);
+	box-shadow: var(--container_shadow);
 	box-sizing: border-box;
-	text-shadow: 0 1px 1px #000;
+	text-shadow: var(--textshadow);
 }
 
 #warning, #success {
@@ -631,10 +655,6 @@ td:last-child {
 	width: 1%;
 	white-space: nowrap;
 }
-
-/*.sectiontitle.configuration ~ tr td.thin {
-	width: 13% !important;
-}*/
 
 #header, #navlinks {
 	background: var(--header);
@@ -735,11 +755,6 @@ td:last-child {
 	background: var(--arrow_down) no-repeat center center / 12px;
 }
 
-/*
-#transports .listitem .arrowup, #transports .listitem .arrowdown {
-	margin: 3px 10px 0 16px;
-}
-*/
 .tableitem .button {
 	margin: 0 !important;
 	padding: 1px 4px !important;
@@ -784,6 +799,14 @@ td:last-child {
 
 .tunnel.building {
 	color: #434343;
+}
+
+.disabled {
+	color: #D33F3F;
+}
+
+.enabled {
+	color: #56B734;
 }
 
 caption {
@@ -851,14 +874,6 @@ table.services {
 	display: block;
 }
 
-.disabled {
-	color: #D33F3F;
-}
-
-.enabled {
-	color: #56B734;
-}
-
 .nopadding {
 	padding: 0 !important;
 }
@@ -883,8 +898,8 @@ table.services {
 	height: 16px;
 	vertical-align: middle;
 	border-radius: 2px;
-	box-shadow: 0 0 0 1px #000;
-	background: #303 var(--tunnel) no-repeat 4px center / 14px;
+	box-shadow: var(--outline);
+	background: var(--menu) var(--tunnel) no-repeat 4px center / 14px;
 }
 
 .tunnelid:not(.local) {
@@ -957,8 +972,8 @@ span[data-tooltip]::after {
 	display: inline-block;
 	vertical-align: middle;
 	border-radius: 2px;
-	box-shadow: 0 0 0 1px #000;
-	background: #303;
+	box-shadow: var(--outline);
+	background: var(--menu);
 }
 
 .chain.inbound .arrowright:not(.zerohop):first-of-type {
@@ -967,7 +982,7 @@ span[data-tooltip]::after {
 
 .host {
 	padding-left: 17px;
-	background: #303 var(--planet) no-repeat 4px center / 9px;
+	background: var(--menu) var(--planet) no-repeat 4px center / 9px;
 }
 
 a[href^="https://gwhois"]:hover, a[href^="https://gwhois"]:focus {
@@ -975,7 +990,7 @@ a[href^="https://gwhois"]:hover, a[href^="https://gwhois"]:focus {
 }
 
 a:hover .host, a:focus .host, a:active .host {
-	background: #505 var(--exploratory) no-repeat 2px center / 13px;
+	background: var(--bg_hover) var(--exploratory) no-repeat 2px center / 13px;
 }
 
 .transferred {
@@ -1062,10 +1077,10 @@ span[data-tooltip]:hover::after, span[data-tooltip]:active::after,
 	left: -10px;
 	font-size: 12px;
 	font-weight: 600;
-	color: #444;
-	border: 1px solid #444;
-	box-shadow: 0 0 1px 1px rgba(0, 0, 0, .2);
-	background: #fff !important;
+	color: var(--ink_tooltip);
+	border: 1px solid var(--ink_tooltip);
+	box-shadow: var(--tooltip_shadow);
+	background: var(--notify) !important;
 	content: attr(data-tooltip);
 	text-shadow: none !important;
 	white-space: nowrap;
@@ -1091,7 +1106,7 @@ span[data-tooltip]:hover::after, span[data-tooltip]:active::after,
 	border-left: none;
 	border-right: none;
 	box-shadow: var(--highlight);
-	background: linear-gradient(to bottom, rgba(48,8,48,.5), rgba(0,0,0,.8));
+	background: var(--slide);
 	box-sizing: border-box;
 	color: var(--ink);
 }
@@ -1132,7 +1147,7 @@ input[type=checkbox]:checked + label::after {
 	display: inline-block;
 	font-size: 80%;
 	border-radius: 2px;
-	background: #202;
+	background: var(--tr-alt);
 	user-select: all;
 	word-break: break-all;
 }
@@ -1278,15 +1293,15 @@ input[type=checkbox]:checked + label::after {
 }
 
 #tunnelsummary th {
-	background: var(--th_multicolumn);
+	background: var(--th);
 }
 
 #tunnelsummary th.in {
-	background: var(--arrow_down) no-repeat center center / 14px, var(--th_multicolumn);
+	background: var(--arrow_down) no-repeat center center / 14px, var(--th);
 }
 
 #tunnelsummary th.out {
-	background: var(--arrow_up) no-repeat center center / 14px, var(--th_multicolumn);
+	background: var(--arrow_up) no-repeat center center / 14px, var(--th);
 }
 
 #tunnelsummary td {
