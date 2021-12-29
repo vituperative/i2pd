@@ -35,11 +35,12 @@ namespace data
 	}
 
 	RouterInfo::RouterInfo (const std::string& fullPath):
-		m_IsUpdated (false), m_IsUnreachable (false), m_SupportedTransports (0),
-		m_ReachableTransports (0), m_Caps (0), m_Version (0)
+		m_IsUpdated (false), m_IsUnreachable (false), 
+		m_SupportedTransports (0),m_ReachableTransports (0), 
+		m_Caps (0), m_Version (0)
 	{
 		m_Addresses = boost::make_shared<Addresses>(); // create empty list
-		m_Buffer = new uint8_t[MAX_RI_BUFFER_SIZE];
+		m_Buffer = new uint8_t[MAX_RI_BUFFER_SIZE];	
 		ReadFromFile (fullPath);
 	}
 
@@ -126,7 +127,8 @@ namespace data
 				return false;
 			}
 			s.seekg(0, std::ios::beg);
-			if (!m_Buffer) m_Buffer = new uint8_t[MAX_RI_BUFFER_SIZE];
+			if (!m_Buffer)
+				m_Buffer = new uint8_t[MAX_RI_BUFFER_SIZE];
 			s.read((char *)m_Buffer, m_BufferLen);
 		}
 		else
@@ -147,6 +149,11 @@ namespace data
 
 	void RouterInfo::ReadFromBuffer (bool verifySignature)
 	{
+		if (!m_Buffer)
+		{
+			m_IsUnreachable = true;
+			return;
+		}	
 		m_RouterIdentity = std::make_shared<IdentityEx>(m_Buffer, m_BufferLen);
 		size_t identityLen = m_RouterIdentity->GetFullLen ();
 		if (identityLen >= m_BufferLen)
