@@ -169,19 +169,20 @@ namespace data
 		
 			typedef std::vector<std::shared_ptr<Address> > Addresses;
 
-			RouterInfo ();
 			RouterInfo (const std::string& fullPath);
 			RouterInfo (const RouterInfo& ) = default;
 			RouterInfo& operator=(const RouterInfo& ) = default;
 			RouterInfo (std::shared_ptr<Buffer>&& buf, size_t len);
 			RouterInfo (const uint8_t * buf, size_t len);
-			~RouterInfo ();
+			virtual ~RouterInfo ();
 
 			std::shared_ptr<const IdentityEx> GetRouterIdentity () const { return m_RouterIdentity; };
 			void SetRouterIdentity (std::shared_ptr<const IdentityEx> identity);
 			std::string GetIdentHashBase64 () const { return GetIdentHash ().ToBase64 (); };
 			uint64_t GetTimestamp () const { return m_Timestamp; };
 			int GetVersion () const { return m_Version; };
+			virtual void SetProperty (const std::string& key, const std::string& value) {}; 
+			virtual void ClearProperties () {};
 			Addresses& GetAddresses () { return *m_Addresses; }; // should be called for local RI only, otherwise must return shared_ptr
 			std::shared_ptr<const Address> GetNTCP2AddressWithStaticKey (const uint8_t * key) const;
 			std::shared_ptr<const Address> GetPublishedNTCP2V4Address () const;
@@ -195,10 +196,6 @@ namespace data
 				const boost::asio::ip::address& host = boost::asio::ip::address(), int port = 0, uint8_t caps = 0);
 			bool AddIntroducer (const Introducer& introducer);
 			bool RemoveIntroducer (const boost::asio::ip::udp::endpoint& e);
-			void SetProperty (const std::string& key, const std::string& value); // called from RouterContext only
-			void DeleteProperty (const std::string& key); // called from RouterContext only
-			std::string GetProperty (const std::string& key) const; // called from RouterContext only
-			void ClearProperties () { m_Properties.clear (); };
 			void SetUnreachableAddressesTransportCaps (uint8_t transports); // bitmask of AddressCaps
 			void UpdateSupportedTransports ();
 			bool IsFloodfill () const { return m_Caps & Caps::eFloodfill; };
@@ -230,16 +227,14 @@ namespace data
 			bool IsIntroducer (bool v4) const;
 
 			uint8_t GetCaps () const { return m_Caps; };
-			void SetCaps (uint8_t caps);
-			void SetCaps (const char * caps);
+			void SetCaps (uint8_t caps) { m_Caps = caps; };
 
 			void SetUnreachable (bool unreachable) { m_IsUnreachable = unreachable; };
 			bool IsUnreachable () const { return m_IsUnreachable; };
 
 			const uint8_t * GetBuffer () const { return m_Buffer->data (); };
 			const uint8_t * LoadBuffer (const std::string& fullPath); // load if necessary
-			int GetBufferLen () const { return m_BufferLen; };
-			void CreateBuffer (const PrivateKeys& privateKeys);
+			size_t GetBufferLen () const { return m_BufferLen; };
 
 			bool IsUpdated () const { return m_IsUpdated; };
 			void SetUpdated (bool updated) { m_IsUpdated = updated; };
@@ -261,20 +256,26 @@ namespace data
 
 			bool IsDestination () const { return false; };
 
+		protected:
+
+			RouterInfo ();
+			uint8_t * GetBufferPointer (size_t offset = 0 ) { return m_Buffer->data () + offset; };
+			void UpdateBuffer (const uint8_t * buf, size_t len);
+			void SetBufferLen (size_t len) { m_BufferLen = len; };
+			void RefreshTimestamp ();
+			const Addresses& GetAddresses () const { return *m_Addresses; };
+		
 		private:
 
 			bool LoadFile (const std::string& fullPath);
 			void ReadFromFile (const std::string& fullPath);
 			void ReadFromStream (std::istream& s);
 			void ReadFromBuffer (bool verifySignature);
-			void WriteToStream (std::ostream& s) const;
 			size_t ReadString (char* str, size_t len, std::istream& s) const;
-			void WriteString (const std::string& str, std::ostream& s) const;
 			void ExtractCaps (const char * value);
 			uint8_t ExtractAddressCaps (const char * value) const;
 			template<typename Filter>
 			std::shared_ptr<const Address> GetAddress (Filter filter) const;
-			void UpdateCapsProperty ();
 
 		private:
 
@@ -284,13 +285,36 @@ namespace data
 			size_t m_BufferLen;
 			uint64_t m_Timestamp;
 			boost::shared_ptr<Addresses> m_Addresses; // TODO: use std::shared_ptr and std::atomic_store for gcc >= 4.9
-			std::map<std::string, std::string> m_Properties;
 			bool m_IsUpdated, m_IsUnreachable;
 			CompatibleTransports m_SupportedTransports, m_ReachableTransports;
 			uint8_t m_Caps;
 			int m_Version;
 			mutable std::shared_ptr<RouterProfile> m_Profile;
 	};
+
+	class LocalRouterInfo: public RouterInfo
+	{
+		public:
+
+			LocalRouterInfo () = default;
+			void CreateBuffer (const PrivateKeys& privateKeys);
+			void UpdateCaps (uint8_t caps);
+
+			void SetProperty (const std::string& key, const std::string& value) override; 
+			void DeleteProperty (const std::string& key); 
+			std::string GetProperty (const std::string& key) const; 
+			void ClearProperties () override { m_Properties.clear (); };
+			
+		private:
+
+			void WriteToStream (std::ostream& s) const;
+			void UpdateCapsProperty ();
+			void WriteString (const std::string& str, std::ostream& s) const;
+			
+		private:
+
+			std::map<std::string, std::string> m_Properties;		
+	};	
 }
 }
 
