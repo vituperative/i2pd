@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2021, The PurpleI2P Project
+* Copyright (c) 2013-2022, The PurpleI2P Project
 *
 * This file is part of Purple i2pd project and licensed under BSD3
 *
@@ -195,8 +195,9 @@ namespace transport
 		MixHash (m3p2, m3p2Len); //h = SHA256(h || ciphertext)
 	}
 
-	bool NTCP2Establisher::ProcessSessionRequestMessage (uint16_t& paddingLen)
+	bool NTCP2Establisher::ProcessSessionRequestMessage (uint16_t& paddingLen, bool& clockSkew)
 	{
+		clockSkew = false;
 		// decrypt X
 		i2p::crypto::CBCDecryption decryption;
 		decryption.SetKey (i2p::context.GetIdentHash ());
@@ -232,7 +233,8 @@ namespace transport
 				if (tsA < ts - NTCP2_CLOCK_SKEW || tsA > ts + NTCP2_CLOCK_SKEW)
 				{
 					LogPrint (eLogWarning, "NTCP2: SessionRequest time difference ", (int)(ts - tsA), " exceeds maximum tolerated clock skew");
-					return false;
+					clockSkew = true;
+					// we send SessionCreate to let Alice know our time and then close session
 				}
 			}
 			else
@@ -476,9 +478,16 @@ namespace transport
 		{
 			LogPrint (eLogDebug, "NTCP2: SessionRequest received ", bytes_transferred);
 			uint16_t paddingLen = 0;
-			if (m_Establisher->ProcessSessionRequestMessage (paddingLen))
+			bool clockSkew = false;
+			if (m_Establisher->ProcessSessionRequestMessage (paddingLen, clockSkew))
 			{
-				if (paddingLen > 0)
+				if (clockSkew)
+				{
+					// we don't care about padding, send SessionCreated and close session
+					SendSessionCreated (); 
+					m_Server.GetService ().post (std::bind (&NTCP2Session::Terminate, shared_from_this ()));
+				}	
+				else if (paddingLen > 0)
 				{
 					if (paddingLen <= NTCP2_SESSION_REQUEST_MAX_SIZE - 64) // session request is 287 bytes max
 					{
@@ -716,7 +725,7 @@ namespace transport
 		EVP_DigestSignInit (m_SendMDCtx, &ctx, nullptr, nullptr, sipKey);
 		EVP_PKEY_CTX_ctrl (ctx, -1, EVP_PKEY_OP_SIGNCTX, EVP_PKEY_CTRL_SET_DIGEST_SIZE, 8, nullptr);
 		EVP_PKEY_free (sipKey);
-		
+
 		sipKey = EVP_PKEY_new_raw_private_key (EVP_PKEY_SIPHASH, nullptr, receiveSipKey, 16);
 		m_ReceiveMDCtx = EVP_MD_CTX_create ();
 		ctx = nullptr;
@@ -879,11 +888,11 @@ namespace transport
 					auto nextMsg = (frame[offset] == eI2NPTunnelData) ? NewI2NPTunnelMessage (true) : NewI2NPMessage (size);
 					nextMsg->len = nextMsg->offset + size + 7; // 7 more bytes for full I2NP header
 					if (nextMsg->len <= nextMsg->maxLen)
-					{	
+					{
 						memcpy (nextMsg->GetNTCP2Header (), frame + offset, size);
 						nextMsg->FromNTCP2 ();
 						m_Handler.PutNextMessage (std::move (nextMsg));
-					}	
+					}
 					else
 						LogPrint (eLogError, "NTCP2: I2NP block is too long for I2NP message");
 					break;
@@ -914,7 +923,7 @@ namespace transport
 		EVP_DigestSignInit (m_SendMDCtx, nullptr, nullptr, nullptr, nullptr);
 		EVP_DigestSignUpdate (m_SendMDCtx, m_SendIV.buf, 8);
 		size_t l = 8;
-		EVP_DigestSignFinal (m_SendMDCtx, m_SendIV.buf, &l);	
+		EVP_DigestSignFinal (m_SendMDCtx, m_SendIV.buf, &l);
 #else
 		i2p::crypto::Siphash<8> (m_SendIV.buf, m_SendIV.buf, 8, m_SendSipKey);
 #endif
@@ -1120,7 +1129,7 @@ namespace transport
 		    !m_SendMDCtx
 #else
 		    !m_SendSipKey
-#endif		    
+#endif
 		    ) return;
 		m_NextSendBuffer = new uint8_t[49]; // 49 = 12 bytes message + 16 bytes MAC + 2 bytes size + up to 19 padding block
 		// termination block

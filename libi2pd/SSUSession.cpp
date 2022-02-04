@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2021, The PurpleI2P Project
+* Copyright (c) 2013-2022, The PurpleI2P Project
 *
 * This file is part of Purple i2pd project and licensed under BSD3
 *
@@ -124,7 +124,7 @@ namespace transport
 						i2p::context.GetRouterInfo ().GetSSUAddress (true);
 					if (!address)
 					{
-						LogPrint (eLogInfo, "SSU is not supported");
+						LogPrint (eLogInfo, "SSU: SSU is not supported");
 						return;
 					}
 					if (Validate (buf, len, address->ssu->key))
@@ -158,7 +158,7 @@ namespace transport
 		auto headerSize = GetSSUHeaderSize (buf);
 		if (headerSize >= len)
 		{
-			LogPrint (eLogError, "SSU: Header size ", headerSize, " exceeds packet length ", len);
+			LogPrint (eLogError, "SSU: SSU header size ", headerSize, " exceeds packet length ", len);
 			return;
 		}
 		SSUHeader * header = (SSUHeader *)buf;
@@ -274,16 +274,7 @@ namespace transport
 		s.Insert (payload, 8); // relayTag and signed on time
 		m_RelayTag = bufbe32toh (payload);
 		payload += 4; // relayTag
-		if (ourIP.is_v4 () && i2p::context.GetStatus () == eRouterStatusTesting)
-		{
-			auto ts = i2p::util::GetSecondsSinceEpoch ();
-			uint32_t signedOnTime = bufbe32toh(payload);
-			if (signedOnTime < ts - SSU_CLOCK_SKEW || signedOnTime > ts + SSU_CLOCK_SKEW)
-			{
-				LogPrint (eLogError, "SSU: Excessive clock skew detected ", (int)ts - signedOnTime, ". Check your clock!");
-				i2p::context.SetError (eRouterErrorClockSkew);
-			}
-		}
+		uint32_t signedOnTime = bufbe32toh(payload);
 		payload += 4; // signed on time
 		// decrypt signature
 		size_t signatureLen = m_RemoteIdentity->GetSignatureLen ();
@@ -295,6 +286,24 @@ namespace transport
 		// verify signature
 		if (s.Verify (m_RemoteIdentity, payload))
 		{
+			if (ourIP.is_v4 () && i2p::context.GetStatus () == eRouterStatusTesting)
+			{
+				auto ts = i2p::util::GetSecondsSinceEpoch ();
+				int offset = (int)ts - signedOnTime;
+				if (m_Server.IsSyncClockFromPeers ())
+				{
+					if (std::abs (offset) > SSU_CLOCK_THRESHOLD)
+					{
+						LogPrint (eLogWarning, "SSU: Clock adjusted by ", -offset, " seconds");
+						i2p::util::AdjustTimeOffset (-offset);
+					}	
+				}	
+				else if (std::abs (offset) > SSU_CLOCK_SKEW)
+				{
+					LogPrint (eLogError, "SSU: Clock skew detected ", offset, ". Check your clock");
+					i2p::context.SetError (eRouterErrorClockSkew);
+				}
+			}
 			LogPrint (eLogInfo, "SSU: Our external address is ", ourIP.to_string (), ":", ourPort);
 			if (!i2p::util::net::IsInReservedRange (ourIP))
 			{
@@ -342,7 +351,7 @@ namespace transport
 		uint32_t signedOnTime = bufbe32toh(payload);
 		if (signedOnTime < ts - SSU_CLOCK_SKEW || signedOnTime > ts + SSU_CLOCK_SKEW)
 		{
-			LogPrint (eLogError, "SSU: 'Confirmed' time difference ", (int)ts - signedOnTime, " exceeds maximum tolerated clock skew");
+			LogPrint (eLogError, "SSU: Message 'confirmed' time difference ", (int)ts - signedOnTime, " exceeds clock skew");
 			Failed ();
 			return;
 		}
@@ -366,7 +375,7 @@ namespace transport
 		}
 		else
 		{
-			LogPrint (eLogError, "SSU: 'Confirmed' signature verification failed");
+			LogPrint (eLogError, "SSU: Message 'confirmed' signature verification failed");
 			Failed ();
 		}
 	}
@@ -413,7 +422,7 @@ namespace transport
 			i2p::context.GetRouterInfo ().GetSSUAddress (true);
 		if (!address)
 		{
-			LogPrint (eLogInfo, "SSU is not supported");
+			LogPrint (eLogInfo, "SSU: SSU is not supported");
 			return;
 		}
 
@@ -447,7 +456,7 @@ namespace transport
 			i2p::context.GetRouterInfo ().GetSSUAddress (true); //v4 only
 		if (!address)
 		{
-			LogPrint (eLogInfo, "SSU is not supported");
+			LogPrint (eLogInfo, "SSU: SSU is not supported");
 			return;
 		}
 		SignedData s; // x,y, remote IP, remote port, our IP, our port, relayTag, signed on time
@@ -688,7 +697,7 @@ namespace transport
 
 	void SSUSession::ProcessRelayResponse (const uint8_t * buf, size_t len)
 	{
-		LogPrint (eLogDebug, "SSU: Relay response received");
+		LogPrint (eLogDebug, "SSU message: Relay response received");
 		boost::asio::ip::address remoteIP;
 		uint16_t remotePort = 0;
 		auto remoteSize = ExtractIPAddressAndPort (buf, len, remoteIP, remotePort);
@@ -1176,7 +1185,7 @@ namespace transport
 			if (addr)
 				memcpy (payload, addr->ssu->key, 32); // intro key
 			else
-				LogPrint (eLogInfo, "SSU is not supported. Can't send peer test");
+				LogPrint (eLogInfo, "SSU: SSU is not supported. Can't send peer test");
 		}
 		else
 			memcpy (payload, introKey, 32); // intro key
@@ -1201,11 +1210,11 @@ namespace transport
 	void SSUSession::SendPeerTest ()
 	{
 		// we are Alice
-		LogPrint (eLogDebug, "SSU: Initiating peer test...");
+		LogPrint (eLogDebug, "SSU: Sending peer test");
 		auto address = IsV6 () ? i2p::context.GetRouterInfo ().GetSSUV6Address () : i2p::context.GetRouterInfo ().GetSSUAddress (true);
 		if (!address)
 		{
-			LogPrint (eLogInfo, "SSU is not supported. Can't send peer test");
+			LogPrint (eLogInfo, "SSU: SSU is not supported. Can't send peer test");
 			return;
 		}
 		uint32_t nonce;
@@ -1246,7 +1255,7 @@ namespace transport
 			}
 			catch (std::exception& ex)
 			{
-				LogPrint (eLogWarning, "SSU: Exception while sending session destroyed: ", ex.what ());
+				LogPrint (eLogWarning, "SSU: Exception while sending session destoroyed: ", ex.what ());
 			}
 			LogPrint (eLogDebug, "SSU: Session destroyed sent");
 		}
