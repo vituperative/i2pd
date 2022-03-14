@@ -631,13 +631,14 @@ namespace data
 		m_Addresses->push_back(std::move(addr));
 	}
 
-	void RouterInfo::AddSSU2Address (const uint8_t * staticKey, uint8_t caps)
+	void RouterInfo::AddSSU2Address (const uint8_t * staticKey, const uint8_t * introKey, uint8_t caps)
 	{
 		auto addr = std::make_shared<Address>();
 		addr->transportStyle = eTransportSSU2;
 		addr->caps = caps;
 		addr->date = 0;
 		memcpy (addr->s, staticKey, 32);
+		memcpy (addr->i, introKey, 32);
 		m_Addresses->push_back(std::move(addr));
 	}	
 		
@@ -1223,11 +1224,12 @@ namespace data
 				}
 			}
 
-			if (address.IsNTCP2 () && isPublished)
+			if ((address.IsNTCP2 () && isPublished) || address.IsSSU2 ())
 			{
-				// publish i for NTCP2
+				// publish i for NTCP2 or SSU2
 				WriteString ("i", properties); properties << '=';
-				WriteString (address.i.ToBase64 (16), properties); properties << ';';
+				size_t len = address.IsSSU2 () ? 32 : 16;
+				WriteString (address.i.ToBase64 (len), properties); properties << ';';
 			}
 
 			if (isPublished || address.ssu)
