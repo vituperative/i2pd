@@ -536,7 +536,41 @@ namespace transport
 					}
 				}
 			}
-			LogPrint (eLogInfo, "Transports: No compatible NTCP2 or SSU addresses available");
+			if (peer.numAttempts == 5 || peer.numAttempts == 6) // SSU2
+			{
+				if (m_SSU2Server)
+				{
+					std::shared_ptr<const RouterInfo::Address> address;
+					if (peer.numAttempts == 5) // SSU2 ipv6
+					{
+						if (context.GetRouterInfo ().IsSSU2V6 () && peer.router->IsReachableBy (RouterInfo::eSSU2V6))
+						{
+							address = peer.router->GetSSU2V6Address ();
+							if (address && m_CheckReserved && i2p::util::net::IsInReservedRange(address->host))
+								address = nullptr;
+						}
+						peer.numAttempts++;
+					}
+					if (!address && peer.numAttempts == 6) // SSU2 ipv4
+					{
+						if (context.GetRouterInfo ().IsSSU2V4 () && peer.router->IsReachableBy (RouterInfo::eSSU2V4))
+						{
+							address = peer.router->GetSSU2V4Address ();
+							if (address && m_CheckReserved && i2p::util::net::IsInReservedRange(address->host))
+								address = nullptr;
+						}
+						peer.numAttempts++;
+					}
+					if (address && address->published)
+					{
+						if (m_SSU2Server->CreateSession (peer.router, address))
+							return true;
+					}
+				}
+				else
+					peer.numAttempts += 2;
+			}	
+			LogPrint (eLogInfo, "Transports: No compatble NTCP2 or SSU addresses available");
 			i2p::data::netdb.SetUnreachable (ident, true); // we are here because all connection attempts failed
 			peer.Done ();
 			std::unique_lock<std::mutex> l(m_PeersMutex);
