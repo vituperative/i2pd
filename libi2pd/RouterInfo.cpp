@@ -216,7 +216,7 @@ namespace data
 			uint8_t cost; // ignore
 			s.read ((char *)&cost, sizeof (cost));
 			s.read ((char *)&address->date, sizeof (address->date));
-			bool isHost = false, isIntroKey = false, isStaticKey = false;
+			bool isHost = false, isIntroKey = false, isStaticKey = false, isV2 = false;
 			char transportStyle[6];
 			ReadString (transportStyle, 6, s);
 			if (!strncmp (transportStyle, "NTCP", 4)) // NTCP or NTCP2
@@ -279,9 +279,21 @@ namespace data
 				}
 				else if (!strcmp (key, "i")) // ntcp2 iv or ssu2 intro
 				{
-					Base64ToByteStream (value, strlen (value), address->i, 16);
-					address->published = true; // presence if "i" means "published"
+					if (address->IsNTCP2 ())
+					{
+						Base64ToByteStream (value, strlen (value), address->i, 16);
+						address->published = true; // presence of "i" means "published" NTCP2
+					}
+					else
+						Base64ToByteStream (value, strlen (value), address->i, 32);
 				}
+				else if (!strcmp (key, "v"))
+				{
+					if (!strcmp (value, "2"))
+						isV2 = true;
+					else
+						LogPrint (eLogWarning, "RouterInfo: Unexpected value ", value, " for v");
+				}	
 				else if (key[0] == 'i')
 				{
 					// introducers
@@ -384,7 +396,7 @@ namespace data
 					}
 				}
 			}
-			else if (address->transportStyle == eTransportSSU2)
+			if (address->transportStyle == eTransportSSU2 || (isV2 && address->transportStyle == eTransportSSU))
 			{
 				if (address->IsV4 ()) supportedTransports |= eSSU2V4;
 				if (address->IsV6 ()) supportedTransports |= eSSU2V6;
@@ -397,7 +409,21 @@ namespace data
 			if (supportedTransports) 
 			{
 				if (!(m_SupportedTransports & supportedTransports)) // avoid duplicates
+				{	
 					addresses->push_back(address);
+					if (address->transportStyle == eTransportSSU && isV2)
+					{
+						// create additional SSU2 address. TODO: remove later
+						auto ssu2addr = std::make_shared<Address> ();
+						ssu2addr->transportStyle = eTransportSSU2;
+						ssu2addr->host = address->host; ssu2addr->port = address->port;
+						ssu2addr->s = address->s; ssu2addr->i = address->i;
+						ssu2addr->date = address->date; ssu2addr->caps = address->caps;
+						ssu2addr->published = address->published;
+						ssu2addr->ssu.reset (new SSUExt ()); ssu2addr->ssu->mtu = address->ssu->mtu;
+						addresses->push_back(ssu2addr);
+					}	
+				}	
 				m_SupportedTransports |= supportedTransports;
 			}
 		}
@@ -1238,7 +1264,7 @@ namespace data
 				WriteString (address.i.ToBase64 (len), properties); properties << ';';
 			}
 
-			if (isPublished || address.ssu)
+			if (isPublished || (address.ssu && !address.IsSSU2 ()))
 			{
 				WriteString ("port", properties);
 				properties << '=';
