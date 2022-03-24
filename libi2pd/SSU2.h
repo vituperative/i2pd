@@ -24,6 +24,7 @@ namespace transport
 	const int SSU2_CONNECT_TIMEOUT = 5; // 5 seconds
 	const int SSU2_TERMINATION_TIMEOUT = 330; // 5.5 minutes
 	const int SSU2_TERMINATION_CHECK_TIMEOUT = 30; // 30 seconds
+	const int SSU2_TOKEN_EXPIRATION_TIMEOUT = 9; // in second
 	const size_t SSU2_SOCKET_RECEIVE_BUFFER_SIZE = 0x1FFFF; // 128K
 	const size_t SSU2_SOCKET_SEND_BUFFER_SIZE = 0x1FFFF; // 128K
 	const size_t SSU2_MTU = 1488;
@@ -32,7 +33,9 @@ namespace transport
 	{
 		eSSU2SessionRequest = 0,
 		eSSU2SessionCreated = 1,
-		eSSU2Retry = 9
+		eSSU2SessionConfirmed = 2,
+		eSSU2Retry = 9,
+		eSSU2TokenRequest = 10
 	};
 
 	enum SSU2BlockType
@@ -60,6 +63,10 @@ namespace transport
 		eSSU2BlkFirstPacketNumber, // 20
 		eSSU2BlkPadding = 254
 	};
+
+	// RouterInfo flags
+	const uint8_t SSU2_ROUTER_INFO_FLAG_REQUEST_FLOOD = 0x01;
+	const uint8_t SSU2_ROUTER_INFO_FLAG_GZIP = 0x02;	
 	
 	class SSU2Server;
 	class SSU2Session: public TransportSession, public std::enable_shared_from_this<SSU2Session>
@@ -71,7 +78,7 @@ namespace transport
 			struct
 			{
 				uint64_t connID;
-				uint8_t packetNum[4];
+				uint32_t packetNum;
 				uint8_t type;
 				uint8_t flags[3];
 			} h;
@@ -88,19 +95,28 @@ namespace transport
 			void Connect ();
 			void Done () override {};
 			void SendI2NPMessages (const std::vector<std::shared_ptr<I2NPMessage> >& msgs) override {};
-			
-			void ProcessSessionRequest (uint64_t connID, uint8_t * buf, size_t len);
+
+			void ProcessFirstIncomingMessage (uint64_t connID, uint8_t * buf, size_t len);
 			bool ProcessSessionCreated (uint8_t * buf, size_t len);
+			bool ProcessSessionConfirmed (uint8_t * buf, size_t len);
 			bool ProcessRetry (uint8_t * buf, size_t len);
 			
 		private:
 
+			void ProcessSessionRequest (Header& header, uint8_t * buf, size_t len);
+			void ProcessTokenRequest (Header& header, uint8_t * buf, size_t len);
+			
 			void SendSessionRequest (uint64_t token = 0);
 			void SendSessionCreated (const uint8_t * X);
+			void SendSessionConfirmed (const uint8_t * Y);
+			void SendTokenRequest ();
+			void SendRetry ();
 
 			void HandlePayload (const uint8_t * buf, size_t len);
 			bool ExtractEndpoint (const uint8_t * buf, size_t size, boost::asio::ip::udp::endpoint& ep);
 			size_t CreateAddressBlock (const boost::asio::ip::udp::endpoint& ep, uint8_t * buf, size_t len);
+			std::shared_ptr<const i2p::data::RouterInfo> ExtractRouterInfo (const uint8_t * buf, size_t size);
+			void CreateNonce (uint64_t seqn, uint8_t * nonce);
 			
 		private:
 
@@ -138,6 +154,10 @@ namespace transport
 
 			bool CreateSession (std::shared_ptr<const i2p::data::RouterInfo> router,
 				std::shared_ptr<const i2p::data::RouterInfo::Address> address);
+
+			void UpdateOutgoingToken (const boost::asio::ip::udp::endpoint& ep, uint64_t token, uint32_t exp);
+			uint64_t FindOutgoingToken (const boost::asio::ip::udp::endpoint& ep) const;
+			uint64_t GetIncomingToken (const boost::asio::ip::udp::endpoint& ep);
 			
 		private:
 
@@ -155,6 +175,7 @@ namespace transport
 			boost::asio::ip::udp::socket m_Socket, m_SocketV6;
 			std::unordered_map<uint64_t, std::shared_ptr<SSU2Session> > m_Sessions;
 			std::map<boost::asio::ip::udp::endpoint, std::shared_ptr<SSU2Session> > m_PendingOutgoingSessions;
+			std::map<boost::asio::ip::udp::endpoint, std::pair<uint64_t, uint32_t> > m_IncomingTokens, m_OutgoingTokens; // remote endpoint -> (token, expires in seconds)
 			i2p::util::MemoryPoolMt<Packet> m_PacketsPool;
 			boost::asio::deadline_timer m_TerminationTimer;
 	};	
