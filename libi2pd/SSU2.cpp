@@ -69,6 +69,7 @@ namespace transport
 			m_State = eSSU2SessionStateTerminated;
 			transports.PeerDisconnected (shared_from_this ());
 			m_Server.RemoveSession (m_SourceConnID);
+			m_SendQueue.clear ();
 			LogPrint (eLogDebug, "SSU2: Session terminated");
 		}
 	}	
@@ -85,6 +86,65 @@ namespace transport
 		m_EphemeralKeys = nullptr;
 		m_NoiseState.reset (nullptr);
 		SetTerminationTimeout (SSU2_TERMINATION_TIMEOUT);
+		transports.PeerConnected (shared_from_this ());
+	}	
+
+	void SSU2Session::Done ()
+	{
+		m_Server.GetService ().post (std::bind (&SSU2Session::Terminate, shared_from_this ()));
+	}
+		
+	void SSU2Session::SendI2NPMessages (const std::vector<std::shared_ptr<I2NPMessage> >& msgs)
+	{		
+		m_Server.GetService ().post (std::bind (&SSU2Session::PostI2NPMessages, shared_from_this (), msgs));
+	}		
+
+	void SSU2Session::PostI2NPMessages (std::vector<std::shared_ptr<I2NPMessage> > msgs)
+	{
+		for (auto it: msgs)
+			m_SendQueue.push_back (it);
+		SendQueue ();
+	}
+
+	void SSU2Session::SendQueue ()
+	{	
+		if (!m_SendQueue.empty ())
+		{
+			uint8_t payload[SSU2_MAX_PAYLOAD_SIZE];
+			size_t payloadSize = 0;
+			payloadSize += CreateAckBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize);
+			while (!m_SendQueue.empty ())
+			{
+				auto msg = m_SendQueue.front ();
+				size_t len = msg->GetNTCP2Length ();
+				if (len + 3 < SSU2_MAX_PAYLOAD_SIZE - payloadSize)
+				{
+					m_SendQueue.pop_front ();
+					payloadSize += CreateI2NPBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize, std::move (msg));
+				}	
+				else if (len > SSU2_MAX_PAYLOAD_SIZE - 32) // message too long
+					m_SendQueue.pop_front ();  // drop it. TODO: fragmentation
+				else
+				{
+					// send right a way
+					if (payloadSize + 16 < SSU2_MAX_PAYLOAD_SIZE)
+						payloadSize += CreatePaddingBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize);	
+					auto packet = SendData (payload, payloadSize);
+					if (packet)
+						m_SentPackets.emplace (packet->packetNum, packet);
+					payloadSize = 0;
+					payloadSize += CreateAckBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize);	
+				}		
+			};	
+			if (payloadSize)
+			{
+				if (payloadSize + 16 < SSU2_MAX_PAYLOAD_SIZE)
+					payloadSize += CreatePaddingBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize);
+				auto packet = SendData (payload, payloadSize);
+				if (packet)
+					m_SentPackets.emplace (packet->packetNum, packet);
+			}	
+		}	
 	}	
 		
 	void SSU2Session::ProcessFirstIncomingMessage (uint64_t connID, uint8_t * buf, size_t len)
@@ -534,28 +594,33 @@ namespace transport
 		return true;
 	}	
 
-	void SSU2Session::SendData (const uint8_t * buf, size_t len)
+	std::shared_ptr<SSU2Session::SentPacket> SSU2Session::SendData (const uint8_t * buf, size_t len)
 	{
 		if (len < 8)
 		{
 			LogPrint (eLogWarning, "SSU2: Data message payload is too short ", (int)len);
-			return;
+			return nullptr;
 		}	
-		Header header;
+		auto packet = std::make_shared<SentPacket>();
+		packet->packetNum = m_SendPacketNum;
+		packet->numResends = 0;
+		Header& header = packet->header;
 		header.h.connID = m_DestConnID;
 		header.h.packetNum = htobe32 (m_SendPacketNum);
 		header.h.type = eSSU2Data;
 		memset (header.h.flags, 0, 3);
-		uint8_t payload[SSU2_MTU];
 		uint8_t nonce[12];
 		CreateNonce (m_SendPacketNum, nonce);
-		i2p::crypto::AEADChaCha20Poly1305 (buf, len, header.buf, 16, m_KeyDataSend, nonce, payload, SSU2_MTU, true);
-		header.ll[0] ^= CreateHeaderMask (m_Address->i, payload + (len - 8));
-		header.ll[1] ^= CreateHeaderMask (m_KeyDataSend + 32, payload + (len + 4));
-		m_Server.Send (header.buf, 16, payload, len + 16, m_RemoteEndpoint);
+		i2p::crypto::AEADChaCha20Poly1305 (buf, len, header.buf, 16, m_KeyDataSend, nonce, packet->payload, SSU2_MTU, true);
+		header.ll[0] ^= CreateHeaderMask (m_Address->i, packet->payload + (len - 8));
+		header.ll[1] ^= CreateHeaderMask (m_KeyDataSend + 32, packet->payload + (len + 4));
+		packet->payloadLen = len + 16;
+		m_Server.Send (header.buf, 16, packet->payload, packet->payloadLen, m_RemoteEndpoint);
 		m_SendPacketNum++;
 		m_LastActivityTimestamp = i2p::util::GetSecondsSinceEpoch ();
-		m_NumSentBytes += len + 32;
+		packet->nextResendTime = m_LastActivityTimestamp + SSU2_RESEND_INTERVAL;
+		m_NumSentBytes += packet->payloadLen + 16;
+		return packet;
 	}	
 		
 	void SSU2Session::ProcessData (uint8_t * buf, size_t len)
@@ -580,18 +645,18 @@ namespace transport
 			LogPrint (eLogWarning, "SSU2: Data AEAD verification failed ");
 			return;
 		}	
-		HandlePayload (payload, payloadSize);
 		m_LastActivityTimestamp = i2p::util::GetSecondsSinceEpoch ();
 		m_NumReceivedBytes += len;
-		if (packetNum > m_ReceivePacketNum)
+		if (UpdateReceivePacketNum (packetNum))
 		{	
-			m_ReceivePacketNum = packetNum;
-			SendQuickAck (); // TODO: don't send too requently
+			if (HandlePayload (payload, payloadSize))
+				SendQuickAck (); // TODO: don't send too requently
 		}	
 	}	
 		
-	void SSU2Session::HandlePayload (const uint8_t * buf, size_t len)
+	bool SSU2Session::HandlePayload (const uint8_t * buf, size_t len)
 	{
+		bool isData = false;
 		size_t offset = 0;
 		while (offset < len)
 		{
@@ -630,11 +695,14 @@ namespace transport
 					memcpy (nextMsg->GetNTCP2Header (), buf + offset, size);
 					nextMsg->FromNTCP2 (); // SSU2 has the same format as NTCP2
 					m_Handler.PutNextMessage (std::move (nextMsg));
+					isData = true;
 					break;	
 				}	
 				case eSSU2BlkFirstFragment:
+					isData = true;
 				break;	
 				case eSSU2BlkFollowOnFragment:
+					isData = true;
 				break;	
 				case eSSU2BlkTermination:
 					LogPrint (eLogDebug, "SSU2: Termination");
@@ -651,6 +719,8 @@ namespace transport
 				case eSSU2BlkNextNonce:
 				break;	
 				case eSSU2BlkAck:
+					LogPrint (eLogDebug, "SSU2: Ack");
+					HandleAck (buf + offset, size);
 				break;	
 				case eSSU2BlkAddress:
 				{
@@ -688,8 +758,29 @@ namespace transport
 			offset += size;
 		}	
 		m_Handler.Flush ();
+		return isData;
 	}	
 
+	void SSU2Session::HandleAck (const uint8_t * buf, size_t len)
+	{
+		if (m_SentPackets.empty ()) return;
+		uint32_t ackThrough = bufbe32toh (buf);
+		auto it = m_SentPackets.rbegin ();
+		while (it != m_SentPackets.rend () && it->first > ackThrough) ++it; // find first less pack <= ackThrough
+		if (it == m_SentPackets.rend ()) return;
+		int32_t firstPacketNum = ackThrough - buf[4]; // acnt
+		if (firstPacketNum < 0) firstPacketNum = 0;
+		auto it1 = it;
+		while (it1 != m_SentPackets.rend () && it1->first >= (uint32_t)firstPacketNum) it1++;
+		if (it1 == m_SentPackets.rend ())
+		{
+			m_SentPackets.erase (m_SentPackets.begin (), it.base ());
+			return;
+		}	
+		m_SentPackets.erase (it1.base (), it.base ());
+		// TODO: handle ranges
+	}
+		
 	bool SSU2Session::ExtractEndpoint (const uint8_t * buf, size_t size, boost::asio::ip::udp::endpoint& ep)
 	{
 		if (size < 2) return false;
@@ -744,9 +835,14 @@ namespace transport
 	{
 		if (len < 8) return 0;
 		buf[0] = eSSU2BlkAck;
+		uint32_t ackThrough = m_OutOfSequencePackets.empty () ? m_ReceivePacketNum : *m_OutOfSequencePackets.rbegin ();
 		htobe16buf (buf + 1, 5);
-		htobe32buf (buf + 3, m_ReceivePacketNum); // Ack Through
-		buf[7] = 0; // acnt
+		htobe32buf (buf + 3, ackThrough); // Ack Through
+		uint8_t acnt = 0;
+		if (ackThrough)
+			acnt = std::min ((int)ackThrough - 1, 255);
+		buf[7] = acnt; // acnt
+		// TODO: ranges
 		return 8;
 	}	
 
@@ -765,6 +861,18 @@ namespace transport
 		else
 			return 0;
 		return paddingSize + 3;
+	}	
+
+	size_t SSU2Session::CreateI2NPBlock (uint8_t * buf, size_t len, std::shared_ptr<I2NPMessage>&& msg)
+	{
+		msg->ToNTCP2 ();
+		auto msgBuf = msg->GetNTCP2Header ();
+		auto msgLen = msg->GetNTCP2Length ();
+		if (msgLen + 3 > len) msgLen = len - 3;
+		buf[0] = eSSU2BlkI2NPMessage;
+		htobe16buf (buf + 1, msgLen); // size
+		memcpy (buf + 3, msgBuf, msgLen);
+		return msgLen + 3;
 	}	
 		
 	std::shared_ptr<const i2p::data::RouterInfo> SSU2Session::ExtractRouterInfo (const uint8_t * buf, size_t size)
@@ -793,6 +901,28 @@ namespace transport
 		htole64buf (nonce + 4, seqn);
 	}
 
+	bool SSU2Session::UpdateReceivePacketNum (uint32_t packetNum)
+	{
+		if (packetNum <= m_ReceivePacketNum) return false; // duplicate 
+		if (packetNum == m_ReceivePacketNum + 1)
+		{
+			for (auto it = m_OutOfSequencePackets.begin (); it != m_OutOfSequencePackets.end ();)
+			{
+				if (*it == packetNum + 1)
+				{
+					packetNum++;
+					it = m_OutOfSequencePackets.erase (it);
+				}	
+				else
+					break;
+			}	
+			m_ReceivePacketNum = packetNum;
+		}	
+		else
+			m_OutOfSequencePackets.insert (packetNum);
+		return true;
+	}	
+		
 	void SSU2Session::SendQuickAck ()
 	{
 		uint8_t payload[SSU2_MTU];

@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <map>
+#include <set>
 #include <unordered_map>
 #include <boost/asio.hpp>
 #include "Crypto.h"
@@ -28,6 +29,9 @@ namespace transport
 	const size_t SSU2_SOCKET_RECEIVE_BUFFER_SIZE = 0x1FFFF; // 128K
 	const size_t SSU2_SOCKET_SEND_BUFFER_SIZE = 0x1FFFF; // 128K
 	const size_t SSU2_MTU = 1488;
+	const size_t SSU2_MAX_PAYLOAD_SIZE = SSU2_MTU - 32;
+	const int SSU2_RESEND_INTERVAL = 3; // in seconds
+	const int SSU2_MAX_NUM_RESENDS = 5;
 	
 	enum SSU2MessageType
 	{
@@ -93,7 +97,17 @@ namespace transport
 				uint8_t flags[3];
 			} h;
 		};
-	
+
+		struct SentPacket
+		{
+			Header header;
+			uint8_t payload[SSU2_MTU];
+			size_t payloadLen;    
+			uint32_t packetNum;
+			uint32_t nextResendTime; // in seconds
+			int numResends;
+		};	
+		
 		public:
 
 			SSU2Session (SSU2Server& server, std::shared_ptr<const i2p::data::RouterInfo> in_RemoteRouter = nullptr,
@@ -106,8 +120,8 @@ namespace transport
 			void Connect ();
 			void Terminate ();
 			void TerminateByTimeout ();
-			void Done () override {};
-			void SendI2NPMessages (const std::vector<std::shared_ptr<I2NPMessage> >& msgs) override {};
+			void Done () override;
+			void SendI2NPMessages (const std::vector<std::shared_ptr<I2NPMessage> >& msgs) override;
 			bool IsEstablished () const { return m_State == eSSU2SessionStateEstablished; };
 			uint64_t GetConnID () const { return m_SourceConnID; };
 			
@@ -120,6 +134,8 @@ namespace transport
 		private:
 
 			void Established ();
+			void PostI2NPMessages (std::vector<std::shared_ptr<I2NPMessage> > msgs);
+			void SendQueue ();
 			
 			void ProcessSessionRequest (Header& header, uint8_t * buf, size_t len);
 			void ProcessTokenRequest (Header& header, uint8_t * buf, size_t len);
@@ -130,18 +146,21 @@ namespace transport
 			void KDFDataPhase (uint8_t * keydata_ab, uint8_t * keydata_ba);
 			void SendTokenRequest ();
 			void SendRetry ();
-			void SendData (const uint8_t * buf, size_t len);
+			std::shared_ptr<SentPacket> SendData (const uint8_t * buf, size_t len);
 			void SendQuickAck ();
 			void SendTermination ();
 			
-			void HandlePayload (const uint8_t * buf, size_t len);
+			bool HandlePayload (const uint8_t * buf, size_t len); // returns true is contains data
+			void HandleAck (const uint8_t * buf, size_t len);
 			bool ExtractEndpoint (const uint8_t * buf, size_t size, boost::asio::ip::udp::endpoint& ep);
 			std::shared_ptr<const i2p::data::RouterInfo> ExtractRouterInfo (const uint8_t * buf, size_t size);
 			void CreateNonce (uint64_t seqn, uint8_t * nonce);
+			bool UpdateReceivePacketNum (uint32_t packetNum); // for Ack, returns false if duplicate
 
 			size_t CreateAddressBlock (const boost::asio::ip::udp::endpoint& ep, uint8_t * buf, size_t len);
 			size_t CreateAckBlock (uint8_t * buf, size_t len);
 			size_t CreatePaddingBlock (uint8_t * buf, size_t len, size_t minSize = 0);
+			size_t CreateI2NPBlock (uint8_t * buf, size_t len, std::shared_ptr<I2NPMessage>&& msg);
 			
 		private:
 
@@ -154,6 +173,9 @@ namespace transport
 			SSU2SessionState m_State;
 			uint8_t m_KeyDataSend[64], m_KeyDataReceive[64]; 
 			uint32_t m_SendPacketNum, m_ReceivePacketNum;
+			std::set<uint32_t> m_OutOfSequencePackets; // packet nums > receive packet num
+			std::map<uint32_t, std::shared_ptr<SentPacket> > m_SentPackets; // packetNum -> packet
+			std::list<std::shared_ptr<I2NPMessage> > m_SendQueue;
 			i2p::I2NPMessagesHandler m_Handler;
 	};
 
