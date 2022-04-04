@@ -444,6 +444,7 @@ namespace transport
 		m_EphemeralKeys->Agree (S, sharedSecret);
 		m_NoiseState->MixKey (sharedSecret);
 		// decrypt part2
+		memset (nonce, 0, 12);
 		uint8_t * payload = buf + 64;
 		std::vector<uint8_t> decryptedPayload(len - 80);
 		if (!i2p::crypto::AEADChaCha20Poly1305 (payload, len - 80, m_NoiseState->m_H, 32, 
@@ -841,7 +842,6 @@ namespace transport
 		// same format as I2NP message block
 		msg->len = msg->offset + len + 7; 
 		memcpy (msg->GetNTCP2Header (), buf, len);
-		msg->FromNTCP2 ();
 		std::shared_ptr<SSU2IncompleteMessage> m;
 		bool found = false;
 		auto it = m_IncompleteMessages.find (msgID);
@@ -861,6 +861,7 @@ namespace transport
 		if (found && ConcatOutOfSequenceFragments (m))
 		{
 			// we have all follow-on fragments already
+			m->msg->FromNTCP2 ();
 			m_Handler.PutNextMessage (std::move (m->msg));
 			m_IncompleteMessages.erase (it);
 		}	
@@ -881,6 +882,7 @@ namespace transport
 				it->second->msg->Concat (buf + 5, len - 5);
 				if (isLast)
 				{
+					it->second->msg->FromNTCP2 ();
 					m_Handler.PutNextMessage (std::move (it->second->msg));
 					m_IncompleteMessages.erase (it);
 				}
