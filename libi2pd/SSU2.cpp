@@ -1109,7 +1109,8 @@ namespace transport
 	}
 		
 	SSU2Server::SSU2Server ():
-		RunnableServiceWithWork ("SSU2"), m_Socket (GetService ()), m_SocketV6 (GetService ()),
+		RunnableServiceWithWork ("SSU2"), m_ReceiveService ("SSU2r"),
+		m_SocketV4 (m_ReceiveService.GetService ()), m_SocketV6 (m_ReceiveService.GetService ()),
 		m_TerminationTimer (GetService ()), m_ResendTimer (GetService ())
 	{
 	}
@@ -1119,6 +1120,7 @@ namespace transport
 		if (!IsRunning ())
 		{
 			StartIOService ();
+			bool found = false;
 			auto& addresses = i2p::context.GetRouterInfo ().GetAddresses ();
 			for (const auto& address: addresses)
 			{
@@ -1139,20 +1141,41 @@ namespace transport
 					if (port)
 					{	
 						if (address->IsV4 ())
-							Receive (OpenSocket (boost::asio::ip::udp::endpoint (boost::asio::ip::udp::v4(), port)));
+						{
+							found = true;
+							OpenSocket (boost::asio::ip::udp::endpoint (boost::asio::ip::udp::v4(), port));
+							m_ReceiveService.GetService ().post(
+							    [this]()
+								{                                                                                
+									Receive (m_SocketV4);
+								});
+						}	
 						if (address->IsV6 ())
-							Receive (OpenSocket (boost::asio::ip::udp::endpoint (boost::asio::ip::udp::v6(), port)));
+						{	
+							found = true;
+							OpenSocket (boost::asio::ip::udp::endpoint (boost::asio::ip::udp::v6(), port));
+							m_ReceiveService.GetService ().post(
+							    [this]()
+								{                                                                                
+									Receive (m_SocketV6);
+								});
+						}	
 					}	
 					else
 						LogPrint (eLogError, "SSU2: Can't start server because port not specified");
 				}
 			}
+			if (found)
+				m_ReceiveService.Start ();
 			ScheduleTermination ();
 		}	
 	}
 		
 	void SSU2Server::Stop ()
 	{
+		if (context.SupportsV4 () || context.SupportsV6 ())
+			m_ReceiveService.Stop ();
+		
 		if (IsRunning ())
 			m_TerminationTimer.cancel ();
 		
@@ -1161,7 +1184,7 @@ namespace transport
 
 	boost::asio::ip::udp::socket& SSU2Server::OpenSocket (const boost::asio::ip::udp::endpoint& localEndpoint)
 	{
-		boost::asio::ip::udp::socket& socket = localEndpoint.address ().is_v6 () ? m_SocketV6 : m_Socket;
+		boost::asio::ip::udp::socket& socket = localEndpoint.address ().is_v6 () ? m_SocketV6 : m_SocketV4;
 		try
 		{
 			socket.open (localEndpoint.protocol ());
@@ -1194,8 +1217,7 @@ namespace transport
 		{
 			i2p::transport::transports.UpdateReceivedBytes (bytes_transferred);
 			packet->len = bytes_transferred;
-			ProcessNextPacket (packet->buf, packet->len, packet->from);
-			m_PacketsPool.ReleaseMt (packet);
+			GetService ().post (std::bind (&SSU2Server::HandleReceivedPacket, this, packet));
 			Receive (socket);
 		}
 		else
@@ -1211,6 +1233,15 @@ namespace transport
 			}
 		}
 	}
+
+	void SSU2Server::HandleReceivedPacket (Packet * packet)
+	{
+		if (packet)
+		{
+			ProcessNextPacket (packet->buf, packet->len, packet->from);
+			m_PacketsPool.ReleaseMt (packet);
+		}	
+	}	
 		
 	void SSU2Server::AddSession (std::shared_ptr<SSU2Session> session)
 	{
@@ -1275,7 +1306,7 @@ namespace transport
 		if (to.address ().is_v6 ())
 			m_SocketV6.send_to (bufs, to, 0, ec);
 		else	
-			m_Socket.send_to (bufs, to, 0, ec);
+			m_SocketV4.send_to (bufs, to, 0, ec);
 		i2p::transport::transports.UpdateSentBytes (headerLen + payloadLen);
 	}	
 		
@@ -1292,7 +1323,7 @@ namespace transport
 		if (to.address ().is_v6 ())
 			m_SocketV6.send_to (bufs, to, 0, ec);
 		else	
-			m_Socket.send_to (bufs, to, 0, ec);
+			m_SocketV4.send_to (bufs, to, 0, ec);
 		i2p::transport::transports.UpdateSentBytes (headerLen + headerXLen + payloadLen);
 	}	
 
