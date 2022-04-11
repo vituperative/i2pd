@@ -85,6 +85,7 @@ namespace transport
 		m_State = eSSU2SessionStateEstablished;
 		m_EphemeralKeys = nullptr;
 		m_NoiseState.reset (nullptr);
+		m_SessionConfirmedFragment1.reset (nullptr);
 		SetTerminationTimeout (SSU2_TERMINATION_TIMEOUT);
 		transports.PeerConnected (shared_from_this ());
 	}	
@@ -123,7 +124,10 @@ namespace transport
 					payloadSize += CreateI2NPBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize, std::move (msg));
 				}	
 				else if (len > SSU2_MAX_PAYLOAD_SIZE - 32) // message too long
-					m_SendQueue.pop_front ();  // drop it. TODO: fragmentation
+				{	
+					m_SendQueue.pop_front ();
+					SendFragmentedMessage (msg);
+				}	
 				else
 				{
 					// send right a way
@@ -147,6 +151,31 @@ namespace transport
 		}	
 	}	
 
+	void SSU2Session::SendFragmentedMessage (std::shared_ptr<I2NPMessage> msg)
+	{
+		uint32_t msgID;
+		memcpy (&msgID, msg->GetHeader () + I2NP_HEADER_MSGID_OFFSET, 4);
+		uint8_t payload[SSU2_MAX_PAYLOAD_SIZE];
+		size_t payloadSize = 0;
+		payloadSize += CreateAckBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize);
+		auto size = CreateFirstFragmentBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - 32 - payloadSize, msg);
+		if (!size) return;
+		payloadSize += size;
+		payloadSize += CreatePaddingBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize);	
+		auto firstPacket = SendData (payload, payloadSize);
+		if (firstPacket)
+			m_SentPackets.emplace (firstPacket->packetNum, firstPacket);
+		uint8_t fragmentNum = 0;
+		while (msg->offset < msg->len)
+		{
+			payloadSize += CreateFollowOnFragmentBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize - 16, msg, fragmentNum, msgID);
+			payloadSize += CreatePaddingBlock (payload + payloadSize, SSU2_MAX_PAYLOAD_SIZE - payloadSize);	
+			auto followonPacket = SendData (payload, payloadSize);
+			if (followonPacket)
+				m_SentPackets.emplace (followonPacket->packetNum, followonPacket);
+		}	
+	}	
+		
 	void SSU2Session::Resend (uint64_t ts)
 	{
 		if (m_SendQueue.empty ()) return;
@@ -367,6 +396,7 @@ namespace transport
 		header.h.packetNum = 0;
 		header.h.type = eSSU2SessionConfirmed;
 		memset (header.h.flags, 0, 3);
+		header.h.flags[0] = 1; // frag, total fragments always 1
 		// payload
 		uint8_t  payload[SSU2_MTU];
 		size_t payloadSize = i2p::context.GetRouterInfo ().GetBufferLen ();
@@ -425,6 +455,31 @@ namespace transport
 		{
 			LogPrint (eLogWarning, "SSU2: Unexpected message type  ", (int)header.h.type);
 			return false;
+		}	
+		// check if fragmented
+		if ((header.h.flags[0] & 0x0F) > 1)
+		{
+			// fragmented
+			if (!(header.h.flags[0] & 0xF0))
+			{
+				// first fragment
+				m_SessionConfirmedFragment1.reset (new SentPacket);
+				m_SessionConfirmedFragment1->header = header;
+				memcpy (m_SessionConfirmedFragment1->payload, buf + 16, len - 16);
+				m_SessionConfirmedFragment1->payloadLen = len - 16;
+				return true; // wait for second fragment
+			}	
+			else
+			{
+				// second fragment
+				if (!m_SessionConfirmedFragment1) return false; // out of sequence
+				uint8_t fullMsg[2*SSU2_MTU];
+				header = m_SessionConfirmedFragment1->header;
+				memcpy (fullMsg + 16, m_SessionConfirmedFragment1->payload, m_SessionConfirmedFragment1->payloadLen);
+				memcpy (fullMsg + 16 + m_SessionConfirmedFragment1->payloadLen, buf + 16, len - 16);
+				buf = fullMsg;
+				len += m_SessionConfirmedFragment1->payloadLen;
+			}	
 		}	
 		// KDF for Session Confirmed part 1
 		m_NoiseState->MixHash (header.buf, 16); // h = SHA256(h || header) 
@@ -1038,6 +1093,42 @@ namespace transport
 		memcpy (buf + 3, msgBuf, msgLen);
 		return msgLen + 3;
 	}	
+
+	size_t SSU2Session::CreateFirstFragmentBlock (uint8_t * buf, size_t len, std::shared_ptr<I2NPMessage> msg)
+	{
+		if (len < 12) return 0;
+		msg->ToNTCP2 ();
+		auto msgBuf = msg->GetNTCP2Header ();
+		auto msgLen = msg->GetNTCP2Length ();
+		if (msgLen + 3 <= len) return 0;
+		msgLen = len - 3;
+		buf[0] = eSSU2BlkFirstFragment;
+		htobe16buf (buf + 1, msgLen); // size
+		memcpy (buf + 3, msgBuf, msgLen);
+		msg->offset = (msgBuf - buf) + msgLen;
+		return msgLen + 3;
+	}	
+
+	size_t SSU2Session::CreateFollowOnFragmentBlock (uint8_t * buf, size_t len, std::shared_ptr<I2NPMessage> msg, uint8_t& fragmentNum, uint32_t msgID)
+	{	
+		if (len < 8) return 0; 
+		bool isLast = true;
+		auto msgLen = msg->len - msg->offset;
+		if (msgLen + 8 > len) 
+		{
+			msgLen = len - 8;
+			isLast = false;
+		}	
+		buf[0] = eSSU2BlkFollowOnFragment;
+		htobe16buf (buf + 1, msgLen); // size
+		fragmentNum++;
+		buf[3] = fragmentNum << 1;
+		if (isLast) buf[3] |= 0x01;
+		memcpy (buf + 4, &msgID, 4);
+		memcpy (buf + 8, msg->buf + msg->offset, msgLen);
+		msg->offset += msgLen;
+		return msgLen + 8;
+	}
 		
 	std::shared_ptr<const i2p::data::RouterInfo> SSU2Session::ExtractRouterInfo (const uint8_t * buf, size_t size)
 	{
