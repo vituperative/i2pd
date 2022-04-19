@@ -33,6 +33,7 @@ namespace transport
 	const int SSU2_RESEND_INTERVAL = 3; // in seconds
 	const int SSU2_MAX_NUM_RESENDS = 5;
 	const int SSU2_INCOMPLETE_MESSAGES_CLEANUP_TIMEOUT = 30; // in seconds	
+	const size_t SSU2_MAX_WINDOW_SIZE = 128; // in packets
 	
 	enum SSU2MessageType
 	{
@@ -158,7 +159,7 @@ namespace transport
 
 			void Established ();
 			void PostI2NPMessages (std::vector<std::shared_ptr<I2NPMessage> > msgs);
-			void SendQueue ();
+			bool SendQueue ();
 			void SendFragmentedMessage (std::shared_ptr<I2NPMessage> msg);
 			
 			void ProcessSessionRequest (Header& header, uint8_t * buf, size_t len);
@@ -210,6 +211,7 @@ namespace transport
 			std::list<std::shared_ptr<I2NPMessage> > m_SendQueue;
 			i2p::I2NPMessagesHandler m_Handler;
 			bool m_IsDataReceived;
+			size_t m_WindowSize;
 	};
 
 	class SSU2Server:  private i2p::util::RunnableServiceWithWork

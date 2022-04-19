@@ -32,7 +32,7 @@ namespace transport
 		TransportSession (in_RemoteRouter, SSU2_CONNECT_TIMEOUT),
 		m_Server (server), m_Address (addr), m_DestConnID (0), m_SourceConnID (0),
 		m_State (eSSU2SessionStateUnknown), m_SendPacketNum (0), m_ReceivePacketNum (0),
-		m_IsDataReceived (false)
+		m_IsDataReceived (false), m_WindowSize (SSU2_MAX_WINDOW_SIZE)
 	{
 		m_NoiseState.reset (new i2p::crypto::NoiseSymmetricState);
 		if (in_RemoteRouter && m_Address)
@@ -108,14 +108,14 @@ namespace transport
 		SendQueue ();
 	}	
 		
-	void SSU2Session::SendQueue ()
+	bool SSU2Session::SendQueue ()
 	{	
-		if (!m_SendQueue.empty ())
+		if (!m_SendQueue.empty () && m_SentPackets.size () <= m_WindowSize)
 		{
 			auto nextResend = i2p::util::GetSecondsSinceEpoch () + SSU2_RESEND_INTERVAL;
 			auto packet = std::make_shared<SentPacket>();
 			packet->payloadSize += CreateAckBlock (packet->payload + packet->payloadSize, SSU2_MAX_PAYLOAD_SIZE - packet->payloadSize);
-			while (!m_SendQueue.empty ())
+			while (!m_SendQueue.empty () && m_SentPackets.size () <= m_WindowSize)
 			{
 				auto msg = m_SendQueue.front ();
 				size_t len = msg->GetNTCP2Length ();
@@ -149,7 +149,9 @@ namespace transport
 				packet->nextResendTime = nextResend;
 				m_SentPackets.emplace (packetNum, packet);
 			}	
-		}	
+			return true;
+		}
+		return false;
 	}	
 
 	void SSU2Session::SendFragmentedMessage (std::shared_ptr<I2NPMessage> msg)
@@ -180,7 +182,7 @@ namespace transport
 		
 	void SSU2Session::Resend (uint64_t ts)
 	{
-		if (m_SendQueue.empty ()) return;
+		if (m_SentPackets.empty ()) return;
 		std::map<uint32_t, std::shared_ptr<SentPacket> > resentPackets;
 		for (auto it = m_SentPackets.begin (); it != m_SentPackets.end (); )
 			if (ts > it->second->nextResendTime)
@@ -207,6 +209,7 @@ namespace transport
 			m_SentPackets.insert (resentPackets.begin (), resentPackets.end ());		
 #endif			
 		}	
+		SendQueue ();
 	}	
 		
 	void SSU2Session::ProcessFirstIncomingMessage (uint64_t connID, uint8_t * buf, size_t len)
@@ -1241,9 +1244,10 @@ namespace transport
 
 	void SSU2Session::FlushData ()
 	{
+		bool sent = SendQueue (); // if we have something to send	
 		if (m_IsDataReceived)
 		{	
-			SendQuickAck ();
+			if (!sent) SendQuickAck ();
 			m_Handler.Flush ();
 			m_IsDataReceived = false;
 		}	
