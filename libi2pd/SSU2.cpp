@@ -853,6 +853,8 @@ namespace transport
 					}	
 				break;	
 				case eSSU2BlkRelayTag:
+					LogPrint (eLogDebug, "SSU2: RelayTag");
+					m_RelayTag = bufbe32toh (buf + offset);
 				break;	
 				case eSSU2BlkNewToken:
 				{
@@ -1026,8 +1028,8 @@ namespace transport
 		s.Insert (session->GetRemoteIdentity ()->GetIdentHash (), 32); // chash
 		s.Insert (buf + 1, 14); // nonce, relay tag, timestamp, ver, asz
 		uint8_t asz = buf[14];
-		s.Insert (buf + 15, asz + 2); // Alice IP, Alice Port
-		if (!s.Verify (GetRemoteIdentity (), buf + 17 + asz))
+		s.Insert (buf + 15, asz); // Alice Port, Alice IP
+		if (!s.Verify (GetRemoteIdentity (), buf + 15 + asz))
 		{
 			LogPrint (eLogWarning, "SSU2: RelayRequest signature verification failed");
 			return; // TODO: send relay response
@@ -1038,6 +1040,40 @@ namespace transport
 		size_t payloadSize = CreateRelayIntroBlock (payload, SSU2_MTU, buf + 1, len -1);
 		payloadSize += CreatePaddingBlock (payload + payloadSize, SSU2_MTU - payloadSize);
 		session->SendData (payload, payloadSize);
+	}	
+
+	void SSU2Session::HandleRelayIntro (const uint8_t * buf, size_t len)
+	{
+		// we are Charlie
+		auto r = i2p::data::netdb.FindRouter (buf + 1); // Alice
+		if (!r)
+		{
+			LogPrint (eLogError, "SSU2: RelayIntro unknown router to introduce"); 
+			return;
+		}	
+		SignedData s;
+		s.Insert ((const uint8_t *)"RelayRequestData", 16); // prologue
+		s.Insert (GetRemoteIdentity ()->GetIdentHash (), 32); // bhash
+		s.Insert (i2p::context.GetIdentHash (), 32); // chash
+		s.Insert (buf + 33, 14); // nonce, relay tag, timestamp, ver, asz
+		uint8_t asz = buf[46];
+		s.Insert (buf + 47, asz); // Alice Port, Alice IP 
+		if (!s.Verify (r->GetIdentity (), buf + 47 + asz))
+		{
+			LogPrint (eLogWarning, "SSU2: RelayIntro signature verification failed");
+			return; // TODO: send relay response
+		}	
+
+		// send relay response to Bob
+		uint8_t payload[SSU2_MTU];
+		size_t payloadSize = CreateRelayResponseBlock (payload, SSU2_MTU, bufbe32toh (buf + 33), bufbe32toh (buf + 37));
+		payloadSize += CreatePaddingBlock (payload + payloadSize, SSU2_MTU - payloadSize);
+		SendData (payload, payloadSize);
+
+		// send HolePunch
+		boost::asio::ip::udp::endpoint ep;
+		if (ExtractEndpoint (buf + 47, asz, ep))
+			m_Server.SendHolePunch (ep);
 	}	
 		
 	bool SSU2Session::ExtractEndpoint (const uint8_t * buf, size_t size, boost::asio::ip::udp::endpoint& ep)
@@ -1064,28 +1100,36 @@ namespace transport
 		return true;
 	}
 
-	size_t SSU2Session::CreateAddressBlock (const boost::asio::ip::udp::endpoint& ep, uint8_t * buf, size_t len)
+	size_t SSU2Session::CreateEndpoint (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& ep)
 	{
-		if (len < 9) return 0;
-		buf[0] = eSSU2BlkAddress;
-		htobe16buf (buf + 3, ep.port ());
+		if (len < 6) return 0;
+		htobe16buf (buf, ep.port ());
 		size_t size = 0;
 		if (ep.address ().is_v4 ())
 		{
-			memcpy (buf + 5, ep.address ().to_v4 ().to_bytes ().data (), 4);
+			memcpy (buf + 2, ep.address ().to_v4 ().to_bytes ().data (), 4);
 			size = 6;
 		}	
 		else if (ep.address ().is_v6 ())
 		{
-			if (len < 21) return 0;
-			memcpy (buf + 5, ep.address ().to_v6 ().to_bytes ().data (), 16);
+			if (len < 18) return 0;
+			memcpy (buf + 2, ep.address ().to_v6 ().to_bytes ().data (), 16);
 			size = 18;
 		}	
 		else
 		{
 			LogPrint (eLogWarning, "SSU2: Wrong address type ", ep.address ().to_string ());
 			return 0;
-		}	
+		}
+		return size;
+	}	
+		
+	size_t SSU2Session::CreateAddressBlock (const boost::asio::ip::udp::endpoint& ep, uint8_t * buf, size_t len)
+	{
+		if (len < 9) return 0;
+		buf[0] = eSSU2BlkAddress;
+		size_t size = CreateEndpoint (buf + 3, len - 3, ep);
+		if (!size) return 0;
 		htobe16buf (buf + 1, size);
 		return size + 3;	
 	}	
@@ -1213,6 +1257,29 @@ namespace transport
 		buf[3] = 0; // flag
 		memcpy (buf + 4, GetRemoteIdentity ()->GetIdentHash (), 32); // Alice router hash
 		memcpy (buf + 36, introData, introDataLen);
+		return payloadSize + 3;
+	}	
+
+	size_t SSU2Session::CreateRelayResponseBlock (uint8_t * buf, size_t len, uint32_t nonce, uint32_t relayTag)
+	{
+		buf[0] = eSSU2BlkRelayResponse;
+		buf[3] = 0; // flag
+		buf[4] = 0;  // code, accept
+		htobe32buf (buf + 5, nonce); // nonce
+		htobe32buf (buf + 9, relayTag); // relayTag
+		htobe32buf (buf + 13, i2p::util::GetSecondsSinceEpoch ()); // timestamp
+		buf[17] = 2; // ver
+		size_t csz = CreateEndpoint (buf + 19, len - 19, boost::asio::ip::udp::endpoint (m_Address->host, m_Address->port));
+		if (!csz) return 0;
+		buf[18] = csz; // csz
+		// signature
+		SignedData s;
+		s.Insert ((const uint8_t *)"RelayAgreementOK", 16); // prologue
+		s.Insert (GetRemoteIdentity ()->GetIdentHash (), 32); // bhash
+		s.Insert (buf + 9, 10 + csz); // relay tag, timestamp, ver, csz and Charlie's endpoint
+		s.Sign (i2p::context.GetPrivateKeys (), buf + 19 + csz);
+		size_t payloadSize = 16 + csz + i2p::context.GetIdentity ()->GetSignatureLen ();
+		htobe16buf (buf + 1, payloadSize); // size
 		return payloadSize + 3;
 	}	
 		
@@ -1580,7 +1647,10 @@ namespace transport
 			m_SocketV6.send_to (bufs, to, 0, ec);
 		else	
 			m_SocketV4.send_to (bufs, to, 0, ec);
-		i2p::transport::transports.UpdateSentBytes (headerLen + payloadLen);
+		if (!ec)	
+			i2p::transport::transports.UpdateSentBytes (headerLen + payloadLen);
+		else
+			LogPrint (eLogError, "SSU2: Send exception: ", ec.message (), " to ", to);
 	}	
 		
 	void SSU2Server::Send (const uint8_t * header, size_t headerLen, const uint8_t * headerX, size_t headerXLen, 
@@ -1597,9 +1667,25 @@ namespace transport
 			m_SocketV6.send_to (bufs, to, 0, ec);
 		else	
 			m_SocketV4.send_to (bufs, to, 0, ec);
-		i2p::transport::transports.UpdateSentBytes (headerLen + headerXLen + payloadLen);
+		
+		if (!ec)
+			i2p::transport::transports.UpdateSentBytes (headerLen + headerXLen + payloadLen);
+		else	
+			LogPrint (eLogError, "SSU2: Send exception: ", ec.message (), " to ", to);
 	}	
 
+	void SSU2Server::SendHolePunch (const boost::asio::ip::udp::endpoint& to)
+	{
+		boost::system::error_code ec;
+		if (to.address ().is_v6 ())
+			m_SocketV6.send_to (boost::asio::buffer ((uint8_t *)nullptr, 0), to, 0, ec);
+		else	
+			m_SocketV4.send_to (boost::asio::buffer ((uint8_t *)nullptr, 0), to, 0, ec);
+
+		if (ec)
+			LogPrint (eLogError, "SSU2: Send exception: ", ec.message (), " to ", to);
+	}	
+		
 	bool SSU2Server::CreateSession (std::shared_ptr<const i2p::data::RouterInfo> router,
 		std::shared_ptr<const i2p::data::RouterInfo::Address> address)
 	{
