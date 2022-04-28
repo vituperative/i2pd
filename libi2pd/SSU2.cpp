@@ -597,6 +597,7 @@ namespace transport
 			return false;
 		}	
 		SetRemoteIdentity (ri->GetRouterIdentity ());
+		m_Server.AddSessionByRouterHash (shared_from_this ()); // we know remote router now
 		m_Address = ri->GetSSU2AddressWithStaticKey (S, m_RemoteEndpoint.address ().is_v6 ()); 
 		if (!m_Address)
 		{
@@ -1124,16 +1125,9 @@ namespace transport
 			else
 			{
 				// we are Alice, message from Bob
-				boost::asio::ip::udp::endpoint ep;
-				if (ExtractEndpoint (buf + 12, buf[11], ep))
+				// update Charlie's endpoint and connect	
+				if (ExtractEndpoint (buf + 12, buf[11], it->second.first->m_RemoteEndpoint))
 				{		
-					// update Charlie's address and connect
-					auto addr = std::make_shared<i2p::data::RouterInfo::Address> ();
-					auto addr1 = it->second.first->m_Address;
-					addr->transportStyle = i2p::data::RouterInfo::eTransportSSU2;
-					addr->host = ep.address (); addr->port = ep.port ();
-					addr->s = addr1->s; addr->i = addr1->i; addr->caps = addr1->caps;
-					it->second.first->m_Address = addr;
 					it->second.first->m_State = eSSU2SessionStateUnknown;
 					it->second.first->Connect ();
 				}	
@@ -1632,12 +1626,43 @@ namespace transport
 	void SSU2Server::AddSession (std::shared_ptr<SSU2Session> session)
 	{
 		if (session)
+		{	
 			m_Sessions.emplace (session->GetConnID (), session);
+			AddSessionByRouterHash (session);
+		}	
 	}	
 
 	void SSU2Server::RemoveSession (uint64_t connID)
 	{
-		m_Sessions.erase (connID);
+		auto it = m_Sessions.find (connID);
+		if (it != m_Sessions.end ())
+		{	
+			auto ident = it->second->GetRemoteIdentity ();
+			if (ident)
+				m_SessionsByRouterHash.erase (ident->GetIdentHash ());
+			m_Sessions.erase (it);
+		}	
+	}	
+
+	void  SSU2Server::AddSessionByRouterHash (std::shared_ptr<SSU2Session> session)
+	{
+		if (session)
+		{	
+			auto ident = session->GetRemoteIdentity ();
+			if (ident)
+			{
+				auto ret = m_SessionsByRouterHash.emplace (ident->GetIdentHash (), session);
+				if (!ret.second)
+				{
+					// session already exists
+					LogPrint (eLogWarning, "SSU2: Session to ", ident->GetIdentHash ().ToBase64 (), " aready exists");
+					// terminate existing
+					GetService ().post (std::bind (&SSU2Session::Terminate, ret.first->second));
+					// update session
+					ret.first->second = session;
+				}	
+			}	
+		}	
 	}	
 		
 	void SSU2Server::AddPendingOutgoingSession (std::shared_ptr<SSU2Session> session)
@@ -1767,12 +1792,15 @@ namespace transport
 		std::shared_ptr<const i2p::data::RouterInfo::Address> address)
 	{
 		if (router && address)
+		{
+			if (address->UsesIntroducer ()) return false; // not implemented yet
 			GetService ().post (
 				[this, router, address]()
 			    {
 					auto session = std::make_shared<SSU2Session> (*this, router, address);
 					session->Connect ();
-				});               
+				});   
+		}	
 		else
 			return false;
 		return true;
