@@ -57,8 +57,14 @@ cd build
 %endif
 
 
-%if 0%{?fedora} >= 35
+%if 0%{?rhel} == 9
 pushd redhat-linux-build
+%endif
+
+%if 0%{?fedora} >= 35
+%if 0%{?fedora} < 37
+pushd redhat-linux-build
+%endif
 %else
 %if 0%{?fedora} >= 33
 pushd %{_target_platform}
@@ -71,8 +77,14 @@ pushd build
 
 make %{?_smp_mflags}
 
-%if 0%{?fedora} >= 33
+%if 0%{?rhel} == 9
 popd
+%endif
+
+%if 0%{?fedora} >= 33
+%if 0%{?fedora} < 37
+popd
+%endif
 %endif
 
 %if 0%{?mageia} > 7
@@ -82,8 +94,14 @@ popd
 %install
 pushd build
 
-%if 0%{?fedora} >= 35
+%if 0%{?rhel} == 9
 pushd redhat-linux-build
+%endif
+
+%if 0%{?fedora} >= 35
+%if 0%{?fedora} < 37
+pushd redhat-linux-build
+%endif
 %else
 %if 0%{?fedora} >= 33
 pushd %{_target_platform}
